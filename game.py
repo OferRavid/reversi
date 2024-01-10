@@ -82,6 +82,9 @@ class Game:
         self.opening = ""
     
 
+#-------------------------------------------------------------------------------------------------------------
+# These functions help the game to follow after the opening moves to make it easier and faster to find a move.
+#============================================================================================================= 
 def notation_to_move(notation: str):
     """
         Converts a notation to indexes. For example: 'C2' => 1, 2
@@ -96,7 +99,7 @@ def notation_to_move(notation: str):
 
 def move_to_notation(i, j, player):
     """
-        Converts a indexes to notation. For example: 1, 2 => 'C2'
+        Converts indexes to a notation. For example: 1, 2 => 'C2'
         The notation is in uppercase if player is 1.
     """
     notation_dict = {
@@ -126,6 +129,3 @@ def get_openings_names():
             if line[1].isdigit():
                 names.append(line.split('|')[1].strip())
     return names
-
-for name in get_openings_names():
-    print(name)
