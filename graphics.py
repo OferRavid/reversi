@@ -1,4 +1,6 @@
 from tkinter import *
+from tkinter import simpledialog
+from tkinter import messagebox
 from PIL import Image, ImageTk
 
 
@@ -40,6 +42,7 @@ class Disk:
             outline=color, 
             fill=color
         )
+        canvas.pack(fill=BOTH, expand=1)
 
 
 class Cell:
@@ -68,26 +71,20 @@ class Window:
     def __init__(self):
         self.__root = Tk()
         self.__root.title("Reversi")
-        self.__right = Frame(self.__root, bg="saddle brown", width=200)
+        self.__right = Frame(self.__root, bg="#CCCCCC", width=200)
         self.__right.pack(side=RIGHT, fill=BOTH)
-        self.__canvas = Canvas(self.__root, height=750, width=750)
+        self.f_canvas = Canvas(self.__right, bg="#CCCCCC", width=160, height=400)
+        self.f_canvas.pack(side=TOP, fill=BOTH, expand=True)
+        self.height = 750
+        self.width = 750
+        self.__canvas = Canvas(self.__root, width=self.width, height=self.height)
         self.__canvas.pack(fill=BOTH)
         self.__board = Board(self)
-        self.__menubar = Menu(self.__root)
-        self.__root.config(menu=self.__menubar)
-        self.__file_menu = Menu(self.__menubar, tearoff=0)
-        self.__sub_menu = Menu(self.__file_menu, tearoff=0)
-        self.__sub_menu.add_command(label="Human vs Human", command=self.reset_board)
-        self.__sub_menu.add_command(label="Human vs Computer", command=self.reset_board)
-        self.__sub_menu.add_command(label="Computer vs Human", command=self.reset_board)
-        self.__sub_menu.add_command(label="Computer vs Computer", command=self.reset_board)
-        self.__file_menu.add_cascade(label="New Game", menu=self.__sub_menu)
-        self.__file_menu.add_separator()
-        self.__file_menu.add_command(label="Exit", command=self.close)
-        self.__menubar.add_cascade(label="File", menu=self.__file_menu)
+        self.manage_ui()
+        
         self.__running = False
         self.__root.protocol("WM_DELETE_WINDOW", self.close)
-    
+
     def redraw(self):
         self.__root.update_idletasks()
         self.__root.update()
@@ -96,32 +93,133 @@ class Window:
         self.__running = True
         while self.__running:
             self.redraw()
-        print("window closed...")
+        print("Thank you for playing Reversi! Goodbye...")
     
     def close(self):
         self.__running = False
+    
+    def manage_ui(self):
+        self.manage_menubar()
+        self.initialize_ui_text()
 
-    def reset_board(self):
-        self.__board = Board(self)
+    def manage_menubar(self):
+        self.__menubar = Menu(self.__root)
+        self.__root.config(menu=self.__menubar)
+        self.__file_menu = Menu(self.__menubar, tearoff=0)
+        self.__file_menu.add_command(label="New Game", command=self.get_num_players_and_start_game)
+        self.__file_menu.add_command(label="Replay Game", command=self.restart)
+        self.__file_menu.add_separator()
+        self.__file_menu.add_command(label="Save Game", command=self.save_game)
+        self.__file_menu.add_command(label="Load Game", command=self.load_game)
+        self.__file_menu.add_separator()
+        self.__file_menu.add_command(label="Exit", command=self.close)
+        self.__menubar.add_cascade(label="File", menu=self.__file_menu)
+        self.__help_menu = Menu(self.__menubar, tearoff=0)
+        self.__help_menu.add_command(label="About", command=self.show_info)
+        self.__help_menu.add_command(label="Help", command=self.show_help_info)
+        self.__menubar.add_cascade(label="Help", menu=self.__help_menu)
+    
+    def initialize_ui_text(self):
+        self.score_text = self.f_canvas.create_text(70,45,text=f"Black's score: {self.__board.score[0]}\n\nWhite's score: {self.__board.score[1]}")
+        self.turn_text = self.f_canvas.create_text(55,100,text="")
+        self.move_count = 0
+        self.move_sequence_text = Text(self.f_canvas,bg="white",width=25,height=30)
+        self.move_sequence_text.pack(side=BOTTOM)
+
+    def update_text_display(self):
+        # self.f_canvas.itemconfig(self.turn_text, text=f"{self.players[self.current_player].name}({self.players[self.current_player].color})'s turn")
+        self.f_canvas.itemconfig(self.score_text, text=f"Black's score: {self.__board.score[0]}\n\nWhite's score: {self.__board.score[1]}")
+        # insert_text =f"{self.move_count}. {self.__board.game.move_sequence[-2:]}"
+        # if self.move_count % 2 == 0:
+        #     insert_text += "\n"
+        # else:
+        #     insert_text += "\t\t"
+        # self.move_sequence_text.insert(INSERT,f"{insert_text}")
+
+    def get_num_players_and_start_game(self):
+        human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
+        if human_players == 0:
+            pass
+        elif human_players == 1:
+            dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
+        elif human_players == 2:
+            pass
+    
+    def restart(self):
+        pass
+
+    def save_game(self):
+        pass
+
+    def load_game(self):
+        pass
+
+    def show_info(self):
+        info = """
+            This is a game called Reversi.
+            It is a two players game, black vs. white.
+
+            Each player in turn places a white and black
+            colored disk to capture the other player's disks.
+            To capture disks a player needs to place his disk
+            on a line in a way that he traps the other player's 
+            disks inbetween 2 of his.\n
+            The game ends when there are no more possible moves for any player.
+            The winner is the player with the most disks of his color.
+        """
+        simpledialog.SimpleDialog(self.__root,text=info,default=1,cancel=1,title="About this game").go()
+    
+    def show_help_info(self):
+        help = """
+            To start a new game, press 'File' in the menubar and choose 'New Game'.
+            You'll be prompted to provide the number of human players, 0 - if you 
+            want to watch two AI players play each other, 1 - to play against an AI
+            player, and 2 - to play against another human player. If you chose 1
+            (play agianst computer), you'll be asked what dificulty level you want
+            the computer player to be: weak or strong.
+
+            To replay a game, press 'File' in the menubar and choose 'Replay Game'.
+            A new game will start with the same players as before, but with opposite 
+            colors from before.
+
+            At any time you can save your current game in order to continue later.
+            Press 'File' in the menubar and choose 'Save Game'.
+            Your current game will be saved under the current time stamp.
+
+            To load a saved game, press 'File' in the menubar and choos 'Load Game'.
+            Choose from the list of saved games the game you want to continue.
+        """
+        simpledialog.SimpleDialog(self.__root,text=help,default=1,cancel=1,title="How to play").go()
     
     def get_canvas(self):
         return self.__canvas
+    
+    def get_root(self):
+        return self.__root
+    
+    def get_frame(self):
+        return self.__right
+    
+    def get_board(self):
+        return self.__board
 
 
 class Board:
     def __init__(self, win: Window):
         self._win = win
-        img = Image.open("wood.jpg")
-        resized_img= img.resize((750,750))
+        self.img = Image.open("wood.jpg")
+        resized_img= self.img.resize((750,750))
         self.__new_img = ImageTk.PhotoImage(resized_img)
         self.__canvas = self._win.get_canvas()
-        self.__canvas.create_image(375,375,image=self.__new_img)
+        self.background_image = self.__canvas.create_image(375,375,image=self.__new_img)
         self.add_grid_labels()
-        self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
+        self.rect = self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
+        self.__canvas.bind('<Button-1>', self.mouse_pressed)
         self.__cells = []
         self.__cell_size = 75
         self.draw_grid()
         self.draw_disks()
+        self.score = [2, 2]
 
     def draw_grid(self):
         for i in range(8):
@@ -167,10 +265,17 @@ class Board:
                 if self.__cells[i][j].owner == 2:
                     color = "white"
                 disk.draw(self.__canvas, color)
-                
     
     def get_mid(self, i, j):
         return (j + 1.5) * self.__cell_size, (i + 1.5) * self.__cell_size
+    
+    def get_position(self,x,y):
+        i = (x - self.__cell_size) // self.__cell_size
+        j = (y - self.__cell_size) // self.__cell_size
+        return i,j
+    
+    def mouse_pressed(self, event):
+        i, j = self.get_position(event.x, event.y)
     
     def get_cells(self):
         return self.__cells

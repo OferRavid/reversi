@@ -1,3 +1,5 @@
+from time import sleep
+from tkinter import BOTH, BOTTOM, INSERT, RIGHT, TOP, Button, Canvas, Entry, Label, StringVar, Text, font
 from graphics import Cell, Window, Board
 
 
@@ -6,68 +8,23 @@ class Player:
         self.name = name
         self.color = color
 
-    def get_move(self, manager):
-        pass 
-
-
-class AIPlayer:
-    def __init__(self, color, name):
-        self.name = name
-        self.color = color
-    
-    def find_move(self):
+    def find_move(self, manager):
         """
+            Returns the move chosen by human player by recognizing clicks on the screen
         """
         pass
 
-    def get_possible_moves(self, board, player):
-        """
-            Return a list of all possible (column,row) tuples that player can play on
-            the current board. 
-        """
-        moves = {}
-        for i in range(8):
-            for j in range(8):
-                if board[i][i] == 0:
-                    lines = self.find_lines(board, i, j, player)
-                    if lines: 
-                        moves[(i,j)] = lines
-        return moves
 
-    def find_lines(self, board, i, j, player):
-        """
-            Find all the uninterupted lines of stones that would be captured if player
-            plays column i and row j.
-            Lines can be vertical (up and down), horizontal (left to right and right to left) and diagonal.
-        """
-        lines = []
-        # x_dir and y_dir are variables representing direction of lines on the x axis and y axis
-        for x_dir, y_dir in [[0, 1], [1, 1], [1, 0], [1, -1],
-                             [0, -1], [-1, -1], [-1, 0], [-1, 1]]:
-            line = []
-            cur_i = i + x_dir
-            cur_j = j + y_dir
-            found = False
-            while 0 <= cur_i < 8 and 0 <= cur_j < 8:
-                if board[cur_j][cur_i] == 0:
-                    break
-                elif board[cur_j][cur_i] == player:
-                    found = True
-                    break
-                else: 
-                    line.append((cur_i,cur_j))
-                    cur_i += x_dir
-                    cur_j += y_dir
-            if found and line: 
-                lines.append(line)
-        return lines
+class AIPlayer(Player):
+    def __init__(self, color, name="AI"):
+        super().__init__(color, name)
+    
+    def find_move(self, manager):
+        pass
 
 
 class Game:
-    def __init__(self, win: Window, gui_board: Board):
-        self._win = win
-        self._canvas = self._win.get_canvas()
-        self._gui_board = gui_board
+    def __init__(self):
         self.board = [
             [0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0],
@@ -78,9 +35,114 @@ class Game:
             [0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0]
         ]
+        self.score = [2, 2]
         self.current_player = 1
-        self.opening = ""
+        self.move_sequence = ""
+
+    def get_score(self):
+        black_score, white_score = 0, 0
+        for row in self.board:
+            for cell in row:
+                if cell == 1:
+                    black_score += 1
+                elif cell == 2:
+                    white_score += 1
+        return [black_score, white_score]
     
+    def switch_player(self):
+        self.current_player = abs(self.current_player - 2) + 1
+    
+    def switch_disks(self, lines):
+        for line in lines:
+            for i, j in line:
+                self.board[i][j] = self.current_player
+
+    def play_move(self, i, j, lines):
+        self.switch_disks(lines)
+        self.board[i][j] = self.current_player
+
+    def play_game(self):
+        while self.score[0] + self.score[1] < 64:
+            player = self.players[self.current_player]
+            possible_moves = get_possible_moves(self.board, self.current_player)
+            print(possible_moves)
+            if not possible_moves:
+                self.switch_player()
+                if not get_possible_moves(self.board, self.current_player):
+                    break
+                continue
+            i, j = 0, 0
+            if player.type == "Human":
+                self._canvas.focus_set()
+                self._canvas.tag_bind(self._gui_board.rect,"<Button-1>",lambda e: self.mouse_pressed(e))
+                i, j = self.current_move
+                while (i,j) not in possible_moves:
+                    message = f"Invalid move. {player.color} player can't place a disk on this square."
+                    print(message)
+                    self.name_instruction.configure(text=message)
+                    sleep(0.1)
+                    self.name_instruction.configure(text="")
+                    self._canvas.tag_bind(self._gui_board.rect,"<Button-1>",lambda e: self.mouse_pressed(e))
+                    i, j = self.current_move
+            else:
+                pass
+            self.play_move(i, j, possible_moves[(i,j)])
+            self.move_count += 1
+            self.move_sequence += move_to_notation(i, j, self.current_player)
+            self._gui_board.draw_disks()
+            self.update_score()
+            self.switch_player()
+            self.update_text_display()
+            self.current_move = None
+            
+    
+
+# ------------------------------------------------------------------------------------------------------
+#       Functions to calculate possible moves and the lines of disks captured by these moves
+# ======================================================================================================
+
+def find_lines(board, i, j, player):
+    """
+        Find all the uninterupted lines of stones that would be captured if player
+        plays row i and column j, and returns all these lines in a list.
+        Lines can be vertical (up and down), horizontal (left to right and right to left) and diagonal.
+    """
+    lines = []
+    # x_dir and y_dir are variables representing direction of lines on the x axis and y axis
+    for x_dir, y_dir in [[0, 1], [1, 1], [1, 0], [1, -1],
+                            [0, -1], [-1, -1], [-1, 0], [-1, 1]]:
+        line = []
+        cur_i = i + y_dir
+        cur_j = j + x_dir
+        found = False
+        while 0 <= cur_i < 8 and 0 <= cur_j < 8:
+            if board[cur_i][cur_j] == 0:
+                break
+            elif board[cur_i][cur_j] == player:
+                found = True
+                break
+            else: 
+                line.append((cur_i,cur_j))
+                cur_i += y_dir
+                cur_j += x_dir
+        if found and line: 
+            lines.append(line)
+    return lines
+
+def get_possible_moves(board, player):
+    """
+        Returns moves dictionary of all possible {(row,column): [lines]} that player can play on
+        the current board. 
+    """
+    moves = {}
+    for i in range(8):
+        for j in range(8):
+            if board[i][j] == 0:
+                lines = find_lines(board, i, j, player)
+                if lines: 
+                    moves[(i,j)] = lines
+    return moves
+
 
 #-------------------------------------------------------------------------------------------------------------
 # These functions help the game to follow after the opening moves to make it easier and faster to find a move.
@@ -129,3 +191,4 @@ def get_openings_names():
             if line[1].isdigit():
                 names.append(line.split('|')[1].strip())
     return names
+
