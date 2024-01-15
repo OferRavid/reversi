@@ -1,5 +1,4 @@
 from graphics import Window
-from game import *
 
 def main():
     win = Window()

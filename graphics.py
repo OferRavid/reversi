@@ -1,7 +1,8 @@
 from tkinter import *
 from tkinter import simpledialog
-from tkinter import messagebox
 from PIL import Image, ImageTk
+from game import *
+from util import *
 
 
 class Point:
@@ -79,8 +80,9 @@ class Window:
         self.width = 750
         self.__canvas = Canvas(self.__root, width=self.width, height=self.height)
         self.__canvas.pack(fill=BOTH)
+        self.score_text = None
         self.__board = Board(self)
-        self.manage_ui()
+        self.manage_menubar()
         
         self.__running = False
         self.__root.protocol("WM_DELETE_WINDOW", self.close)
@@ -97,17 +99,13 @@ class Window:
     
     def close(self):
         self.__running = False
-    
-    def manage_ui(self):
-        self.manage_menubar()
-        self.initialize_ui_text()
 
     def manage_menubar(self):
         self.__menubar = Menu(self.__root)
         self.__root.config(menu=self.__menubar)
         self.__file_menu = Menu(self.__menubar, tearoff=0)
         self.__file_menu.add_command(label="New Game", command=self.get_num_players_and_start_game)
-        self.__file_menu.add_command(label="Replay Game", command=self.restart)
+        self.__file_menu.add_command(label="Replay Game", command=self.replay_game)
         self.__file_menu.add_separator()
         self.__file_menu.add_command(label="Save Game", command=self.save_game)
         self.__file_menu.add_command(label="Load Game", command=self.load_game)
@@ -120,21 +118,28 @@ class Window:
         self.__menubar.add_cascade(label="Help", menu=self.__help_menu)
     
     def initialize_ui_text(self):
-        self.score_text = self.f_canvas.create_text(70,45,text=f"Black's score: {self.__board.score[0]}\n\nWhite's score: {self.__board.score[1]}")
-        self.turn_text = self.f_canvas.create_text(55,100,text="")
-        self.move_count = 0
+        self.score_text = self.f_canvas.create_text(70,45,text="Black's score: 2\n\nWhite's score: 2")
+        self.turn_text = self.f_canvas.create_text(100,100,text="")
         self.move_sequence_text = Text(self.f_canvas,bg="white",width=25,height=30)
         self.move_sequence_text.pack(side=BOTTOM)
 
-    def update_text_display(self):
-        # self.f_canvas.itemconfig(self.turn_text, text=f"{self.players[self.current_player].name}({self.players[self.current_player].color})'s turn")
+    def update_text_display(self, move_count, insert_text):
         self.f_canvas.itemconfig(self.score_text, text=f"Black's score: {self.__board.score[0]}\n\nWhite's score: {self.__board.score[1]}")
-        # insert_text =f"{self.move_count}. {self.__board.game.move_sequence[-2:]}"
-        # if self.move_count % 2 == 0:
-        #     insert_text += "\n"
-        # else:
-        #     insert_text += "\t\t"
-        # self.move_sequence_text.insert(INSERT,f"{insert_text}")
+        if move_count % 2 == 0:
+            insert_text += "\n"
+        else:
+            insert_text += "\t\t"
+        self.move_sequence_text.insert(INSERT,f"{insert_text}")
+
+    def restart_canvas(self):
+        self.__right.destroy()
+        self.__canvas.destroy()
+        self.__right = Frame(self.__root, bg="#CCCCCC", width=200)
+        self.__right.pack(side=RIGHT, fill=BOTH)
+        self.f_canvas = Canvas(self.__right, bg="#CCCCCC", width=160, height=400)
+        self.f_canvas.pack(side=TOP, fill=BOTH, expand=True)
+        self.__canvas = Canvas(self.__root, width=self.width, height=self.height)
+        self.__canvas.pack(fill=BOTH)
 
     def get_num_players_and_start_game(self):
         human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
@@ -143,10 +148,35 @@ class Window:
         elif human_players == 1:
             dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
         elif human_players == 2:
-            pass
+            if self.score_text:
+                self.restart_canvas()
+                self.__board = Board(self)
+            name1 = simpledialog.askstring(title="First player's name", prompt="Type player1's name:")
+            if not name1:
+                name1 = "Pennywise"
+            name2 = simpledialog.askstring(title="Second player's name", prompt="Type player2's name:")
+            if not name2:
+                name2 = "Chucky"
+            p1 = Player("Black", name1)
+            p2 = Player("White", name2)
+            self.__board = Board(self, p1, p2)
+            self.initialize_ui_text()
+            game = Game()
+            self.__board.play(game)
+
     
-    def restart(self):
-        pass
+    def replay_game(self):
+        if not self.__board.players:
+            raise Exception("Can't replay game if you haven't played yet!")
+        p1 = self.__board.players[1]
+        p2 = self.__board.players[2]
+        p1.color = "White"
+        p2.color = "Black"
+        self.restart_canvas()
+        self.__board = Board(self, p2, p1)
+        self.initialize_ui_text()
+        game = Game()
+        self.__board.play(game)
 
     def save_game(self):
         pass
@@ -167,7 +197,7 @@ class Window:
             The game ends when there are no more possible moves for any player.
             The winner is the player with the most disks of his color.
         """
-        simpledialog.SimpleDialog(self.__root,text=info,default=1,cancel=1,title="About this game").go()
+        simpledialog.SimpleDialog(self.__root, text=info, default=1, cancel=1, title="About this game").go()
     
     def show_help_info(self):
         help = """
@@ -189,7 +219,7 @@ class Window:
             To load a saved game, press 'File' in the menubar and choos 'Load Game'.
             Choose from the list of saved games the game you want to continue.
         """
-        simpledialog.SimpleDialog(self.__root,text=help,default=1,cancel=1,title="How to play").go()
+        simpledialog.SimpleDialog(self.__root, text=help, default=1, cancel=1, title="How to play").go()
     
     def get_canvas(self):
         return self.__canvas
@@ -199,13 +229,10 @@ class Window:
     
     def get_frame(self):
         return self.__right
-    
-    def get_board(self):
-        return self.__board
 
 
 class Board:
-    def __init__(self, win: Window):
+    def __init__(self, win: Window, player1=None, player2=None):
         self._win = win
         self.img = Image.open("wood.jpg")
         resized_img= self.img.resize((750,750))
@@ -214,12 +241,16 @@ class Board:
         self.background_image = self.__canvas.create_image(375,375,image=self.__new_img)
         self.add_grid_labels()
         self.rect = self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
-        self.__canvas.bind('<Button-1>', self.mouse_pressed)
         self.__cells = []
         self.__cell_size = 75
         self.draw_grid()
         self.draw_disks()
-        self.score = [2, 2]
+        if player1 and player2:
+            self.score = [2, 2]
+            self.current_player = 1
+            self.move_count = 0
+            self.move_sequence = ""
+            self.players = [None, player1, player2]
 
     def draw_grid(self):
         for i in range(8):
@@ -269,13 +300,64 @@ class Board:
     def get_mid(self, i, j):
         return (j + 1.5) * self.__cell_size, (i + 1.5) * self.__cell_size
     
+    def flip_disks(self, i, j, lines):
+        for line in lines:
+            for u, v in line:
+                self.__cells[u][v].owner = self.current_player
+        self.__cells[i][j].owner = self.current_player
+        self.draw_disks()
+    
     def get_position(self,x,y):
-        i = (x - self.__cell_size) // self.__cell_size
-        j = (y - self.__cell_size) // self.__cell_size
+        i = (y - self.__cell_size) // self.__cell_size
+        j = (x - self.__cell_size) // self.__cell_size
         return i,j
     
-    def mouse_pressed(self, event):
+    def mouse_pressed(self, event, game, color):
         i, j = self.get_position(event.x, event.y)
+        try:
+            lines = game.play(i, j, self.current_player, color)
+            self.score = game.get_score()
+            self.move_count += 1
+            self.move_sequence += move_to_notation(i, j, self.current_player)
+            insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
+            self._win.update_text_display(self.move_count, insert_text)
+            self.flip_disks(i, j, lines)
+            self.switch_player()
+            game.switch_player()
+        except InvalidMoveError as e:
+            print(e.__str__() + "\nTry again.")
+        return self.play(game)
     
-    def get_cells(self):
-        return self.__cells
+    def switch_player(self):
+        self.current_player = abs(self.current_player - 2) + 1
+    
+    def end_game(self):
+        print("Game over!")
+        if self.score[0] == self.score[1]:
+            print("Game ended with a draw.")
+            return
+        winner = self.players[1]
+        disks = self.score[0]
+        if self.score[1] > self.score[0]:
+            winner = self.players[2]
+            disks = self.score[1]
+        print(f"{winner.name}({winner.color}) won with {disks} disks.")
+        return
+
+    def play(self, game):
+        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({self.players[self.current_player].color})'s turn")
+
+        if self.score[0] + self.score[1] == 64:
+            return self.end_game()
+        cur_player = self.players[self.current_player]
+        possible_moves = get_possible_moves(game.board, self.current_player)
+        if not possible_moves:
+            self.switch_player()
+            game.switch_player()
+            possible_moves = get_possible_moves(game.board, self.current_player)
+            if not possible_moves:
+                return self.end_game
+            return self.play(game)
+        if cur_player.type == "Human":
+            self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, cur_player.color))
+
