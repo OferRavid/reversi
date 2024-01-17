@@ -1,8 +1,10 @@
+import os
 from tkinter import *
 from tkinter import simpledialog
 from PIL import Image, ImageTk
 from game import *
 from util import *
+import datetime
 
 
 class Point:
@@ -108,7 +110,9 @@ class Window:
         self.__file_menu.add_command(label="Replay Game", command=self.replay_game)
         self.__file_menu.add_separator()
         self.__file_menu.add_command(label="Save Game", command=self.save_game)
+        self.__file_menu.add_command(label="Save Game As...", command=self.save_game_as)
         self.__file_menu.add_command(label="Load Game", command=self.load_game)
+        self.__file_menu.add_command(label="Delete Save", command=self.delete_save)
         self.__file_menu.add_separator()
         self.__file_menu.add_command(label="Exit", command=self.close)
         self.__menubar.add_cascade(label="File", menu=self.__file_menu)
@@ -162,6 +166,7 @@ class Window:
             self.__board = Board(self, p1, p2)
             self.initialize_ui_text()
             game = Game()
+            self.__board.game_in_progress = True
             self.__board.play(game)
 
     
@@ -176,13 +181,146 @@ class Window:
         self.__board = Board(self, p2, p1)
         self.initialize_ui_text()
         game = Game()
+        self.__board.game_in_progress = True
         self.__board.play(game)
-
+    
+    def get_save_file_name(self, name1, name2):
+        file_name = f"{name1}-{name2}"
+        file_count = 1
+        files = os.listdir('Saved_games')
+        for file in files:
+            if file.startswith(file_name):
+                file_count += 1
+        file_name += f"_{file_count}.txt"
+        final_name = simpledialog.askstring(title="Save Game As...", prompt="Accept suggested file name or choose something else", initialvalue=file_name)
+        if final_name != file_name:
+            file_count = 1
+            for file in files:
+                if file.startswith(final_name):
+                    file_count += 1
+            if '.' in final_name:
+                final_name = f"{'.'.join(final_name.split('.')[:-1])}_{file_count}.{final_name.split('.')[-1]}"
+            else:
+                final_name += f"_{file_count}.txt"
+        if final_name:
+            return f"Saved_games/{final_name}"
+    
+    def write_save(self, path, name1, name2):
+        with open(path, 'w') as f:
+            timestamp = datetime.datetime.now()
+            game = self.__board.move_sequence
+            f.write(f"{timestamp}\n{name1}-{name2}\n{game}")
+    
     def save_game(self):
-        pass
+        if self.__board.game_saved:
+            path = self.__board.save_name
+            try:
+                self.write_save(path, self.__board.players[1].name, self.__board.players[2].name)
+            except FileNotFoundError:
+                print("Old save file is missing. Try using \'Save Game As...\' menu option.")
 
+        else:
+            self.save_game_as()
+
+    def save_game_as(self):
+        if not self.__board.game_in_progress:
+            raise Exception("Can't save a game if game is not in progress.")
+        path = self.get_save_file_name(self.__board.players[1].name, self.__board.players[2].name)
+        if path:
+            self.__board.save_name = path
+            self.__board.game_saved = True
+            try:
+                self.write_save(path, self.__board.players[1].name, self.__board.players[2].name)
+            except FileExistsError:
+                print("The file name you chose already exists. Try again with another name.")
+        else:
+            print("Failed to save game. Please try again and provide the name of the game's save file.")
+
+    def load_game_file(self, temp_win):
+        temp_win.destroy()
+        self.restart_canvas()
+        path = f"Saved_games/{self.load_name.get()}"
+        with open(path) as f:
+            lines = f.readlines()
+            names = lines[1].strip('\n').split('-')
+            self.__board = Board(self, Player("Black", names[0]), Player("White", names[1]))
+            self.__board.save_name = path
+            self.__board.game_saved = True
+            self.initialize_ui_text()
+            game = Game()
+            self.__board.game_in_progress = True
+            self.__board.move_sequence = lines[-1].strip('\n')
+            sequence = self.__board.move_sequence
+            move_count = 0
+            player = 1
+            for i in range(2, len(sequence) + 1, 2):
+                move_notation = sequence[i-2:i]
+                player = 2
+                color = "White"
+                if move_notation[0].isupper():
+                    player = 1
+                    color = "Black"
+                game.current_player = player
+                i, j = notation_to_move(move_notation)
+                game.play(i, j, player, color)
+                move_count += 1
+                insert_text = f"{move_count}. {move_notation}"
+                self.update_text_display(move_count, insert_text)
+            for i in range(8):
+                for j in range(8):
+                    self.__board.get_cells()[i][j].owner = game.board[i][j]
+            self.__board.score = game.get_score()
+            self.__board.move_count = move_count
+            self.__board.current_player = player
+            game.current_player = player
+            self.__board.switch_player()
+            game.switch_player()
+            self.__board.draw_disks()
+            self.__board.play(game)
+    
     def load_game(self):
-        pass
+        games = os.listdir('Saved_games')
+        if not games:
+            print("There aren't any saved games to load.")
+            return
+        temp_win = Tk()
+        temp_win.title("Load Game")
+        Label(temp_win, text="Choose which game you want to load:")
+        self.load_name = StringVar(temp_win)
+        for game in games:
+            Radiobutton(temp_win,
+                        text=game, 
+                        indicatoron = 0,
+                        width = 20,
+                        padx = 20, 
+                        variable=self.load_name, 
+                        command=lambda: self.load_game_file(temp_win),
+                        value=game).pack(anchor=W)
+    
+    def delete_save_file(self, temp_win):
+        temp_win.destroy()
+        path = f"Saved_games/{self.delete_name.get()}"
+        print(path)
+        os.remove(path)
+    
+    def delete_save(self):
+        games = os.listdir('Saved_games')
+        if not games:
+            print("There aren't any saved games to delete.")
+            return
+        temp_win = Tk()
+        temp_win.title("Delete save")
+        Label(temp_win, text="Choose which save you want to delete:")
+        self.delete_name = StringVar(temp_win)
+        for game in games:
+            Radiobutton(temp_win,
+                        text=game, 
+                        indicatoron = 0,
+                        width = 20,
+                        padx = 20, 
+                        variable=self.delete_name, 
+                        command=lambda: self.delete_save_file(temp_win),
+                        value=game).pack(anchor=W)
 
     def show_info(self):
         info = """
@@ -245,6 +383,9 @@ class Board:
         self.__cell_size = 75
         self.draw_grid()
         self.draw_disks()
+        self.game_in_progress = False
+        self.game_saved = False
+        self.save_name = ""
         if player1 and player2:
             self.score = [2, 2]
             self.current_player = 1
@@ -300,6 +441,9 @@ class Board:
     def get_mid(self, i, j):
         return (j + 1.5) * self.__cell_size, (i + 1.5) * self.__cell_size
     
+    def get_cells(self):
+        return self.__cells
+    
     def flip_disks(self, i, j, lines):
         for line in lines:
             for u, v in line:
@@ -334,14 +478,18 @@ class Board:
     def end_game(self):
         print("Game over!")
         if self.score[0] == self.score[1]:
+            self._win.f_canvas.itemconfig(self._win.turn_text, text="It's a draw.")
             print("Game ended with a draw.")
             return
         winner = self.players[1]
-        disks = self.score[0]
+        winner_disks = self.score[0]
+        loser_disks = self.score[1]
         if self.score[1] > self.score[0]:
             winner = self.players[2]
-            disks = self.score[1]
-        print(f"{winner.name}({winner.color}) won with {disks} disks.")
+            winner_disks = self.score[1]
+            loser_disks = self.score[0]
+        print(f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
+        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
         return
 
     def play(self, game):
@@ -356,7 +504,7 @@ class Board:
             game.switch_player()
             possible_moves = get_possible_moves(game.board, self.current_player)
             if not possible_moves:
-                return self.end_game
+                return self.end_game()
             return self.play(game)
         if cur_player.type == "Human":
             self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, cur_player.color))
