@@ -222,7 +222,7 @@ class Window:
         """
             The method for the 'Replay' menu command. We switch the players' colors and restart a game iswitching players' turns.
         """
-        if not self.__board.players:
+        if not self.__board.game_in_progress:
             raise Exception("Can't replay game if you haven't played yet!")
         p1 = self.__board.players[1]
         p2 = self.__board.players[2]
