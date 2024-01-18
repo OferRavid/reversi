@@ -18,12 +18,13 @@ class Player:
 
 class AIPlayer(Player):
     def __init__(self, color, name, type="AI"):
-        super().__init__(color, name)
+        super().__init__(color, name, type)
     
     def find_move(self, game):
         pass
 
-    def get_opening_move(self, sequence):
+    def get_opening_move(self, game):
+        sequence = game.move_sequence
         openings = get_openings()
         possible_openings = []
         if not sequence:
@@ -35,8 +36,8 @@ class AIPlayer(Player):
         if not possible_openings:
             return None
         opening = possible_openings[random.randint(0, len(possible_openings) - 1)]
-        move = notation_to_move(opening[len(sequence): len(sequence) + 2])
-        return move
+        i, j = notation_to_move(opening[len(sequence): len(sequence) + 2])
+        return (i, j)
         
 
 
@@ -54,6 +55,7 @@ class Game:
         ]
         self.score = [2, 2]
         self.current_player = 1
+        self.move_sequence = ""
 
     def get_score(self):
         black_score, white_score = 0, 0
@@ -77,6 +79,8 @@ class Game:
     def play_move(self, i, j, lines, player):
         self.flip_disks(lines)
         self.board[i][j] = player
+        notation = move_to_notation(i, j, player)
+        self.move_sequence += notation
     
     def play(self, i, j, player, color):
         if self.board[i][j] != 0:

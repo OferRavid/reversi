@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 from game import *
 from util import *
 import datetime
+from random_player import RandomPlayer
 
 
 class Point:
@@ -151,6 +152,26 @@ class Window:
             pass
         elif human_players == 1:
             dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
+            color = ["Black", "White"][random.randint(0,1)]
+            p1, p2, name = None, None, None
+            if dificulty == 1:
+                if color == "Black":
+                    p1 = RandomPlayer(color)
+                    name = simpledialog.askstring(title="Second player's name", prompt="Type player2's name:")
+                    if not name:
+                        name = "Chucky"
+                    p2 = Player("White", name)
+                else:
+                    name = simpledialog.askstring(title="First player's name", prompt="Type player1's name:")
+                    if not name:
+                        name = "Pennywise"
+                    p1 = Player("Black", name)
+                    p2 = RandomPlayer(color)
+            self.__board = Board(self, p1, p2)
+            self.initialize_ui_text()
+            game = Game()
+            self.__board.game_in_progress = True
+            self.__board.play(game)
         elif human_players == 2:
             if self.score_text:
                 self.restart_canvas()
@@ -459,17 +480,9 @@ class Board:
     def mouse_pressed(self, event, game, color):
         i, j = self.get_position(event.x, event.y)
         try:
-            lines = game.play(i, j, self.current_player, color)
-            self.score = game.get_score()
-            self.move_count += 1
-            self.move_sequence += move_to_notation(i, j, self.current_player)
-            insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
-            self._win.update_text_display(self.move_count, insert_text)
-            self.flip_disks(i, j, lines)
-            self.switch_player()
-            game.switch_player()
+            self.play_move(i, j, game, color)
         except InvalidMoveError as e:
-            print(e.__str__() + "\nTry again.")
+            print(str(e) + "\nTry again.")
         return self.play(game)
     
     def switch_player(self):
@@ -491,6 +504,17 @@ class Board:
         print(f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
         self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
         return
+    
+    def play_move(self, i, j, game, color):
+        lines = game.play(i, j, self.current_player, color)
+        self.score = game.get_score()
+        self.move_count += 1
+        self.move_sequence += move_to_notation(i, j, self.current_player)
+        insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
+        self._win.update_text_display(self.move_count, insert_text)
+        self.flip_disks(i, j, lines)
+        self.switch_player()
+        game.switch_player()
 
     def play(self, game):
         self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({self.players[self.current_player].color})'s turn")
@@ -508,4 +532,9 @@ class Board:
             return self.play(game)
         if cur_player.type == "Human":
             self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, cur_player.color))
+        elif cur_player.type == "AI":
+            i, j = cur_player.find_move(game)
+            self.play_move(i, j, game, cur_player.color)
+            return self.play(game)
+
 
