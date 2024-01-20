@@ -8,6 +8,7 @@ class Node:
         self.board = board
         self.player = player
         self.parent = parent
+        self.children = []
         self.value = 0
         self.set_value()
     
@@ -16,9 +17,12 @@ class Node:
             for square in row:
                 if square == self.player:
                     self.value += 1
+                elif square == 0:
+                    continue
+                else:
+                    self.value -= 1
     
     def get_children(self):
-        self.children = []
         next_player = abs(self.player - 2) + 1
         for move, lines in get_possible_moves(self.board, self.player).items():
             board_copy = copy.deepcopy(self.board)
@@ -27,6 +31,19 @@ class Node:
             child = Node(game.board, next_player, self)
             self.children.append(child)
     
-    def print_board(self):
+    def get_min_child(self):
+        if self.children == []:
+            return
+        return min(self.children, key=lambda x: x.value)
+    
+    def get_max_child(self):
+        if self.children == []:
+            return
+        return max(self.children, key=lambda x: x.value)
+    
+    def __repr__(self) -> str:
+        board = ""
         for row in self.board:
-            print(row)
+            board += f"\n{str(row)}"
+        return board
+
