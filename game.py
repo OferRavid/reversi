@@ -3,6 +3,18 @@ from time import sleep
 from tkinter import BOTH, BOTTOM, INSERT, RIGHT, TOP, Button, Canvas, Entry, Label, StringVar, Text, font
 from util import *
 
+
+starting_board = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 2, 1, 0, 0, 0],
+    [0, 0, 0, 1, 2, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0]
+]
+
 class Player:
     def __init__(self, color, name, type="Human"):
         self.name = name
@@ -40,45 +52,31 @@ class AIPlayer(Player):
         return (i, j)
         
 
-
 class Game:
-    def __init__(self):
-        self.board = [
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 2, 1, 0, 0, 0],
-            [0, 0, 0, 1, 2, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0]
-        ]
+    def __init__(self, board=starting_board):
+        self.board = board
         self.score = [2, 2]
         self.current_player = 1
         self.move_sequence = ""
 
     def get_score(self):
-        black_score, white_score = 0, 0
-        for row in self.board:
-            for cell in row:
-                if cell == 1:
-                    black_score += 1
-                elif cell == 2:
-                    white_score += 1
-        self.score = [black_score, white_score]
         return self.score
     
     def switch_player(self):
         self.current_player = abs(self.current_player - 2) + 1
     
-    def flip_disks(self, lines):
+    def flip_disks(self, lines, player):
         for line in lines:
             for i, j in line:
-                self.board[i][j] = self.current_player
+                self.board[i][j] = player
+                self.score[player - 1] += 1
+                other_player = abs(player - 2)
+                self.score[other_player] -= 1
 
     def play_move(self, i, j, lines, player):
-        self.flip_disks(lines)
+        self.flip_disks(lines, player)
         self.board[i][j] = player
+        self.score[player - 1] += 1
         notation = move_to_notation(i, j, player)
         self.move_sequence += notation
     
@@ -90,3 +88,4 @@ class Game:
             raise InvalidMoveError(f"{color} player isn't allowed to place a disk in this square.")
         self.play_move(i, j, lines, player)
         return lines
+
