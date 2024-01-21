@@ -4,19 +4,8 @@ from tkinter import BOTH, BOTTOM, INSERT, RIGHT, TOP, Button, Canvas, Entry, Lab
 from util import *
 
 
-starting_board = [
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 2, 1, 0, 0, 0],
-    [0, 0, 0, 1, 2, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0]
-]
-
 class Player:
-    def __init__(self, color, name, type="Human"):
+    def __init__(self, color: int, name, type="Human"):
         self.name = name
         self.color = color
         self.type = type
@@ -29,7 +18,7 @@ class Player:
 
 
 class AIPlayer(Player):
-    def __init__(self, color, name, type="AI"):
+    def __init__(self, color: int, name, type="AI"):
         super().__init__(color, name, type)
     
     def find_move(self, game):
@@ -53,8 +42,20 @@ class AIPlayer(Player):
         
 
 class Game:
-    def __init__(self, board=starting_board):
-        self.board = board
+    def __init__(self, board=None):
+        if board:
+            self.board = board
+        else:
+            self.board = [
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 2, 1, 0, 0, 0],
+                [0, 0, 0, 1, 2, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0],
+            ]
         self.score = [2, 2]
         self.current_player = 1
         self.move_sequence = ""
@@ -89,3 +90,8 @@ class Game:
         self.play_move(i, j, lines, player)
         return lines
 
+    def __repr__(self) -> str:
+        board = ""
+        for row in self.board:
+            board += f"\n{str(row)}"
+        return board

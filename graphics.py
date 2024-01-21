@@ -166,7 +166,7 @@ class Window:
         name2 = simpledialog.askstring(title="Second player's name", prompt="Type player2's name:")
         if not name2:
             name2 = "Chucky"
-        return Player("Black", name1), Player("White", name2)
+        return Player(1, name1), Player(2, name2)
     
     def get_constractor_and_name(self, is_human, is_random, is_minimax):
         '''
@@ -202,11 +202,11 @@ class Window:
                 ai_name, ai_const = self.get_constractor_and_name(False, False, True)
             name = self.get_constractor_and_name(True, False, False)
             if die % 2 == 0:
-                p1 = Player("Black", name)
-                p2 = ai_const("White", ai_name)
+                p1 = Player(1, name)
+                p2 = ai_const(2, ai_name)
             else:
-                p2 = Player("White", name)
-                p1 = ai_const("Black", ai_name)
+                p2 = Player(2, name)
+                p1 = ai_const(1, ai_name)
         elif human_players == 2:
             p1, p2 = self.get_human_players()
         self.start_game(p1, p2)
@@ -215,6 +215,8 @@ class Window:
         self.__board = Board(self, p1, p2)
         self.initialize_ui_text()
         game = Game()
+        print(game)
+        print()
         self.__board.game_in_progress = True
         self.__board.play(game)
 
@@ -226,8 +228,8 @@ class Window:
             raise Exception("Can't replay game if you haven't played yet!")
         p1 = self.__board.players[1]
         p2 = self.__board.players[2]
-        p1.color = "White"
-        p2.color = "Black"
+        p1.color = 2
+        p2.color = 1
         self.restart_canvas()
         self.start_game(p2, p1)
     
@@ -297,10 +299,12 @@ class Window:
             print("Failed to save game. Please try again and provide the name of the game's save file.")
     
     def get_save_file_content(self, path):
+        names, sequence = [], ""
         with open(path) as f:
             lines = f.readlines()
             names = lines[1].strip('\n').split('-')
             sequence = lines[-1].strip('\n')
+        return names, sequence
     
     def populate_board(self, game, sequence):
         player, move_count = 0, 0
@@ -318,6 +322,14 @@ class Window:
             insert_text = f"{move_count}. {move_notation}"
             self.update_text_display(move_count, insert_text)
         return move_count, player
+    
+    def get_player_from_file(self, name, color):
+        if name == "Randy":
+            return RandomPlayer(color, name)
+        elif name == "Max":
+            pass #TODO
+        else:
+            return Player(color, name)
 
     def load_game_file(self, temp_win):
         '''
@@ -327,8 +339,9 @@ class Window:
         self.restart_canvas()
         path = f"Saved_games/{self.load_name.get()}"
         names, sequence = self.get_save_file_content(path)
-        
-        self.__board = Board(self, Player("Black", names[0]), Player("White", names[1]))
+        p1 = self.get_player_from_file(names[0], 1)
+        p2 = self.get_player_from_file(names[1], 2)
+        self.__board = Board(self, p1, p2)
         self.__board.save_name = path
         self.__board.game_saved = True
         self.initialize_ui_text()
@@ -568,8 +581,9 @@ class Board:
             winner = self.players[2]
             winner_disks = self.score[1]
             loser_disks = self.score[0]
-        print(f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
-        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({winner.color}) won by {winner_disks - loser_disks} disks.")
+        color = "Black" if winner.color == 1 else "White"
+        print(f"{winner.name}({color}) won by {winner_disks - loser_disks} disks.")
+        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({color}) won by {winner_disks - loser_disks} disks.")
         return
     
     def play_move(self, i, j, game, color):
@@ -587,7 +601,8 @@ class Board:
         """
             This is the main method for running the game.
         """
-        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({self.players[self.current_player].color})'s turn")
+        color = "Black" if self.current_player == 1 else "White"
+        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({color})'s turn")
 
         if self.score[0] + self.score[1] == 64:
             return self.end_game()
@@ -601,10 +616,10 @@ class Board:
                 return self.end_game()
             return self.play(game)
         if cur_player.type == "Human":
-            self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, cur_player.color))
+            self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, color))
         elif cur_player.type == "AI":
             i, j = cur_player.find_move(game)
-            self.play_move(i, j, game, cur_player.color)
+            self.play_move(i, j, game, color)
             return self.play(game)
 
 
