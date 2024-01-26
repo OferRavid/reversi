@@ -1,4 +1,5 @@
 # Reversi - A personal project for the game Reversi with an AI agent
+[ReversiWindow](./reversi_window.png)
 
 # Author
     - Ofer Ravid
