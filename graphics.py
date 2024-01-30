@@ -5,7 +5,9 @@ from PIL import Image, ImageTk
 from game import *
 from util import *
 import datetime
-from random_player import RandomPlayer
+from ai_players import *
+from time import sleep
+import random
 
 
 # ------------- classes definitions for maintaining the graphics
@@ -39,7 +41,7 @@ class Disk:
         self._y = center.y
         self._r = radius
     
-    def draw(self, canvas, color):
+    def draw(self, canvas:Canvas, color):
         canvas.create_oval(
             self._x - self._r, 
             self._y - self._r, 
@@ -80,6 +82,7 @@ class Window:
     def __init__(self):
         self.__root = Tk()
         self.__root.title("Reversi")
+        self.__root.resizable(False, False)
         self.__right = Frame(self.__root, bg="#CCCCCC", width=200)
         self.__right.pack(side=RIGHT, fill=BOTH)
         self.f_canvas = Canvas(self.__right, bg="#CCCCCC", width=160, height=400)
@@ -108,6 +111,7 @@ class Window:
     
     def close(self):
         self.__running = False
+        # self.save_game()
     
     # --------------- UI methods
 
@@ -115,6 +119,7 @@ class Window:
         self.__menubar = Menu(self.__root)
         self.__root.config(menu=self.__menubar)
         self.__file_menu = Menu(self.__menubar, tearoff=0)
+        self.__root.resizable(False, False)
         self.__file_menu.add_command(label="New Game", command=self.get_num_players_and_start_game)
         self.__file_menu.add_command(label="Replay", command=self.replay_game)
         self.__file_menu.add_separator()
@@ -166,57 +171,36 @@ class Window:
         name2 = simpledialog.askstring(title="Second player's name", prompt="Type player2's name:")
         if not name2:
             name2 = "Chucky"
-        return Player(1, name1), Player(2, name2)
-    
-    def get_constractor_and_name(self, is_human, is_random, is_minimax):
-        '''
-            Helper method for getting a single player's name and constructor for AI player
-        '''
-        if is_human:
-            name = simpledialog.askstring(title="Human player's name", prompt="Type player's name:")
-            if not name:
-                name = "Jason"
-            return name
-        if is_random:
-            return "Randy", RandomPlayer
-        if is_minimax:
-            pass #TODO
+        return self.get_player(name1, 1), self.get_player(name2, 2)
 
     def get_num_players_and_start_game(self):
         """
             This is the method for the 'New Game' menu command. Using 'simpledialog' we get user's input to start a new game
             with 0-2 human players.
         """
-        if self.__board.game_in_progress:
-            self.restart_canvas()
-            self.__board = Board(self)
         human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
         p1, p2 = None, None
-        if human_players == 0:
-            pass #TODO
+        if human_players == 0: #TODO
+            p1 = GreedyPlayer(1)
+            p2 = GreedyPlayer(2)
         elif human_players == 1:
             dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
-            die = random.randint(1,6)
-            ai_name, ai_const = self.get_constractor_and_name(False, True, False)
+            random.seed(time.time())
+            ai_name = random.choice(["RandomPlayer", "GreedyPlayer"])
             if dificulty == 2:
-                ai_name, ai_const = self.get_constractor_and_name(False, False, True)
-            name = self.get_constractor_and_name(True, False, False)
-            if die % 2 == 0:
-                p1 = Player(1, name)
-                p2 = ai_const(2, ai_name)
-            else:
-                p2 = Player(2, name)
-                p1 = ai_const(1, ai_name)
+                ai_name = random.choice(["MinimaxPlayer", "MCTSPlayer"])
+            name = simpledialog.askstring(title="Human player's name", prompt="Type player's name:")
+            p1 = self.get_player(name, 1)
+            p2 = self.get_player("MCTSPlayer", 2)
         elif human_players == 2:
             p1, p2 = self.get_human_players()
         self.start_game(p1, p2)
 
     def start_game(self, p1, p2):
+        self.restart_canvas()
         self.__board = Board(self, p1, p2)
         self.initialize_ui_text()
         game = Game()
-        print(game)
-        print()
         self.__board.game_in_progress = True
         self.__board.play(game)
 
@@ -228,9 +212,8 @@ class Window:
             raise Exception("Can't replay game if you haven't played yet!")
         p1 = self.__board.players[1]
         p2 = self.__board.players[2]
-        p1.color = 2
-        p2.color = 1
-        self.restart_canvas()
+        p1 = self.get_player(p1.name, 2)
+        p2 = self.get_player(p2.name, 1)
         self.start_game(p2, p1)
     
     def get_save_file_name(self, name1, name2):
@@ -245,6 +228,9 @@ class Window:
                 file_count += 1
         file_name += f"_{file_count}.txt"
         final_name = simpledialog.askstring(title="Save Game As...", prompt="Accept suggested file name or choose something else", initialvalue=file_name)
+        if not final_name:
+            print("Save was canceled or save name wasn't provided.")
+            return
         if final_name != file_name:
             file_count = 1
             for file in files:
@@ -254,8 +240,7 @@ class Window:
                 final_name = f"{'.'.join(final_name.split('.')[:-1])}_{file_count}.{final_name.split('.')[-1]}"
             else:
                 final_name += f"_{file_count}.txt"
-        if final_name:
-            return f"Saved_games/{final_name}"
+        return f"Saved_games/{final_name}"
     
     def write_save(self, path, name1, name2):
         '''
@@ -296,7 +281,7 @@ class Window:
             except FileExistsError:
                 print("The file name you chose already exists. Try again with another name.")
         else:
-            print("Failed to save game. Please try again and provide the name of the game's save file.")
+            print("Game wasn't saved. If you didn't cancel, please try again and provide the name of the game's save file.")
     
     def get_save_file_content(self, path):
         names, sequence = [], ""
@@ -323,11 +308,15 @@ class Window:
             self.update_text_display(move_count, insert_text)
         return move_count, player
     
-    def get_player_from_file(self, name, color):
-        if name == "Randy":
+    def get_player(self, name, color):
+        if name == "RandomPlayer":
             return RandomPlayer(color, name)
-        elif name == "Max":
-            pass #TODO
+        elif name == "MinimaxPlayer":
+            return MinimaxPlayer(color, name)
+        elif name == "MCTSPlayer":
+            return MCTSPlayer(color, name, "AI", 20, 50)
+        elif name == "GreedyPlayer":
+            return GreedyPlayer(color, name)
         else:
             return Player(color, name)
 
@@ -339,8 +328,8 @@ class Window:
         self.restart_canvas()
         path = f"Saved_games/{self.load_name.get()}"
         names, sequence = self.get_save_file_content(path)
-        p1 = self.get_player_from_file(names[0], 1)
-        p2 = self.get_player_from_file(names[1], 2)
+        p1 = self.get_player(names[0], 1)
+        p2 = self.get_player(names[1], 2)
         self.__board = Board(self, p1, p2)
         self.__board.save_name = path
         self.__board.game_saved = True
@@ -467,29 +456,33 @@ class Window:
 # =======================================================================================================
 # --------------- The Board class defines and manages the game board for the Gui
 class Board:
-    def __init__(self, win: Window, player1=None, player2=None):
+    def __init__(self, win: Window=None, player1=None, player2=None):
         self._win = win
-        self.img = Image.open("wood.jpg")
-        resized_img= self.img.resize((750,750))
-        self.__new_img = ImageTk.PhotoImage(resized_img)
-        self.__canvas = self._win.get_canvas()
-        self.background_image = self.__canvas.create_image(375,375,image=self.__new_img)
-        self.add_grid_labels()
-        self.rect = self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
+        if self._win:
+            self.img = Image.open("wood.jpg")
+            self.width = self._win.width
+            self.height = self._win.height
+            resized_img= self.img.resize((self.width, self.height))
+            self.new_img = ImageTk.PhotoImage(resized_img)
+            self.__canvas = self._win.get_canvas()
+            self.background_image = self.__canvas.create_image(375,375,image=self.new_img)
+            self.add_grid_labels()
+            self.rect = self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
         self.__cells = []
         self.__cell_size = 75
-        self.draw_grid()
-        self.draw_disks()
         self.game_in_progress = False
         self.game_saved = False
         self.save_name = ""
+        self.draw_grid()
+        self.draw_disks()
         if player1 and player2:
             self.score = [2, 2]
             self.current_player = 1
             self.move_count = 0
             self.move_sequence = ""
             self.players = [None, player1, player2]
-
+    
+    
     # -------- Methods for initializing and drawing the game board
             
     def draw_grid(self):
@@ -512,7 +505,8 @@ class Board:
                     elif j == 4:
                         new_cell.owner = 2
                 row.append(new_cell)
-                new_cell.draw(self.__canvas)
+                if self._win:
+                    new_cell.draw(self.__canvas)
             self.__cells.append(row)
     
     def add_grid_labels(self):
@@ -525,6 +519,8 @@ class Board:
             self.__canvas.create_text(margin2, margin1 + 75 * i, text=numbers[i], font=("Times", 28, "bold"), fill="#CDAA7D")
     
     def draw_disks(self):
+        if not self._win:
+            return
         for i in range(8):
             for j in range(8):
                 x, y = self.get_mid(i, j)
@@ -536,6 +532,9 @@ class Board:
                 if self.__cells[i][j].owner == 2:
                     color = "white"
                 disk.draw(self.__canvas, color)
+        if self.game_in_progress and not (self.players[1].type == "Human" or self.players[2].type == "Human"):
+            self._win.redraw()
+            sleep(0.5)
     
     def get_mid(self, i, j):
         return (j + 1.5) * self.__cell_size, (i + 1.5) * self.__cell_size
@@ -571,9 +570,10 @@ class Board:
     def end_game(self):
         print("Game over!")
         if self.score[0] == self.score[1]:
-            self._win.f_canvas.itemconfig(self._win.turn_text, text="It's a draw.")
+            if self._win:
+                self._win.f_canvas.itemconfig(self._win.turn_text, text="It's a draw.")
             print("Game ended with a draw.")
-            return
+            return 0
         winner = self.players[1]
         winner_disks = self.score[0]
         loser_disks = self.score[1]
@@ -582,27 +582,29 @@ class Board:
             winner_disks = self.score[1]
             loser_disks = self.score[0]
         color = "Black" if winner.color == 1 else "White"
-        print(f"{winner.name}({color}) won by {winner_disks - loser_disks} disks.")
-        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({color}) won by {winner_disks - loser_disks} disks.")
-        return
+        print(f"{winner.name}({color}) has won: {winner_disks}-{loser_disks}.")
+        if self._win:
+            self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{winner.name}({color}) has won.")
+        return winner.color
     
     def play_move(self, i, j, game, color):
         lines = game.play(i, j, self.current_player, color)
         self.score = game.get_score()
         self.move_count += 1
         self.move_sequence += move_to_notation(i, j, self.current_player)
-        insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
-        self._win.update_text_display(self.move_count, insert_text)
+        if self._win:
+            insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
+            self._win.update_text_display(self.move_count, insert_text)
         self.flip_disks(i, j, lines)
         self.switch_player()
-        game.switch_player()
 
     def play(self, game):
         """
             This is the main method for running the game.
         """
         color = "Black" if self.current_player == 1 else "White"
-        self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({color})'s turn")
+        if self._win:
+            self._win.f_canvas.itemconfig(self._win.turn_text, text=f"{self.players[self.current_player].name}({color})'s turn")
 
         if self.score[0] + self.score[1] == 64:
             return self.end_game()
@@ -610,16 +612,14 @@ class Board:
         possible_moves = get_possible_moves(game.board, self.current_player)
         if not possible_moves:
             self.switch_player()
-            game.switch_player()
             possible_moves = get_possible_moves(game.board, self.current_player)
             if not possible_moves:
                 return self.end_game()
+            game.switch_player()
             return self.play(game)
         if cur_player.type == "Human":
             self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, color))
-        elif cur_player.type == "AI":
+        else:
             i, j = cur_player.find_move(game)
             self.play_move(i, j, game, color)
             return self.play(game)
-
-

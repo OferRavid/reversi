@@ -30,6 +30,9 @@ class Node:
             game.play_move(move[0], move[1], lines, self.player)
             child = Node(game.board, next_player, self)
             self.children.append(child)
+        if self.children == []:
+            if get_possible_moves(self.board, next_player):
+                self.children.append(Node(copy.deepcopy(self.board), next_player, self))
     
     def get_min_child(self):
         if self.children == []:
