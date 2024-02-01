@@ -179,6 +179,8 @@ class Window:
             with 0-2 human players.
         """
         human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
+        if not human_players:
+            return
         p1, p2 = None, None
         if human_players == 0: #TODO
             p1 = GreedyPlayer(1)
@@ -186,12 +188,16 @@ class Window:
         elif human_players == 1:
             dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
             random.seed(time.time())
+            if not dificulty:
+                dificulty = random.randint(1, 2)
             ai_name = random.choice(["RandomPlayer", "GreedyPlayer"])
             if dificulty == 2:
-                ai_name = random.choice(["MinimaxPlayer", "MCTSPlayer"])
+                ai_name = "MinimaxPlayer"
             name = simpledialog.askstring(title="Human player's name", prompt="Type player's name:")
+            if not name:
+                name = "Jason"
             p1 = self.get_player(name, 1)
-            p2 = self.get_player("MCTSPlayer", 2)
+            p2 = self.get_player(ai_name, 2)
         elif human_players == 2:
             p1, p2 = self.get_human_players()
         self.start_game(p1, p2)
@@ -459,7 +465,7 @@ class Board:
     def __init__(self, win: Window=None, player1=None, player2=None):
         self._win = win
         if self._win:
-            self.img = Image.open("wood.jpg")
+            self.img = Image.open("imgs/wood.jpg")
             self.width = self._win.width
             self.height = self._win.height
             resized_img= self.img.resize((self.width, self.height))

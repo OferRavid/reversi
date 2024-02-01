@@ -133,3 +133,38 @@ class Game:
         for row in self.board:
             board += f"\n{str(row)}"
         return board
+    
+    def play_game(self):
+        while not self.is_game_over():
+            print(self)
+            if self.current_player == 1:
+                print("Black's turn...")
+            else:
+                print("White's turn...")
+            print("Choose a move from: ",
+                  set([move_to_notation(move[0], move[1], self.current_player) 
+                      for move in list(get_possible_moves(self.board, self.current_player).keys())]))
+            try:
+                move_input = input("Enter your choice (e.g., 'A1'): ")
+                i, j = notation_to_move(move_input)
+                color = "Black" if self.current_player == 1 else "White"
+                self.play(i, j, self.current_player, color)
+            except KeyError:
+                print("Invalid input. Please enter a valid move.")
+            except InvalidMoveError as e:
+                print(str(e))
+            except IndexError:
+                print("Invalid input. Please enter a valid move.")
+            except:
+                print("An error occurred. Please try again.")
+        print(self)
+        if self.winner == 1:
+            print("Black wins!")
+        elif self.winner == 2:
+            print("White wins!")
+        else:
+            print("It's a draw!")
+
+if __name__ == "__main__":
+    board = Game()
+    board.play_game()
