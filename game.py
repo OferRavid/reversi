@@ -80,7 +80,7 @@ class Game:
                     self.white_score += 1
 
     
-    def count_disks(self, player):
+    def player_disk_count(self, player):
         disks = 0
         for row in self.board:
             for square in row:

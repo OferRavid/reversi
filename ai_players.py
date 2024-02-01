@@ -1,6 +1,5 @@
 from copy import deepcopy
 import math
-import time
 from game import *
 from util import *
 from node import *
@@ -15,7 +14,7 @@ class RandomPlayer(AIPlayer):
     def find_move(self, game):
         possible_moves = get_possible_moves(game.board, self.color)
         moves = list(possible_moves.keys())
-        i, j = moves[random.randint(0, len(moves) - 1)]
+        i, j = moves[random.randrange(0, len(moves))]
         return i, j
 
 
@@ -30,7 +29,7 @@ class GreedyPlayer(AIPlayer):
         for move, lines in possible_moves.items():
             game_copy = copy.deepcopy(game)
             game_copy.play_move(move[0], move[1], lines, self.color)
-            amount = game_copy.count_disks(self.color)
+            amount = game_copy.player_disk_count(self.color)
             if amount > disk_amount:
                 best_move = move
                 disk_amount = amount
@@ -191,81 +190,3 @@ class MCTSPlayer(AIPlayer):
         move = child.move
         return move
 
-# ==============================================================
-# -- Functions for simulating game
-
-corners = [
-    (0, 0), (0, 7), (7, 0), (7, 7)
-]
-
-# Bad moves are locations near a corner in vertical or horizontal directions
-bad_moves = [
-    (0, 1), (1, 0), (0, 6), (6, 0),
-    (7, 1), (1, 7), (7, 6), (6, 7)
-]
-
-# Very bad moves are locations near corners in diagonal direction
-very_bad_moves = [
-    (1, 1), (1, 6), (6, 1), (6, 6)
-]
-
-
-def rollout(game:Game, num_sims):
-    turn = game.current_player
-    wins, draws, elapsed = 0, 0, 0
-
-    start = time.time()
-    for _ in range(num_sims):
-        temp_game = sim_semi_rand(game)
-        if temp_game.winner == turn:
-            wins += 1
-        if temp_game.winner == 0:
-            draws += 1
-
-    elapsed = time.time() - start
-    loss = num_sims - wins - draws
-
-    return wins, loss, draws, elapsed
-
-def sim_rand(state:Game):
-    """
-        This is a function that simulates a random selection of moves in a game of Reversi.
-        This function is used by the rollout method of MonteCarloPlayer (MCTS algorithm)
-    """
-    new_state = deepcopy(state)
-    possible_moves = get_possible_moves(new_state.board, new_state.current_player)
-    while possible_moves:
-        random.seed(time.time())
-        move = random.choice(list(possible_moves.keys()))
-        new_state.play_move(move[0], move[1], possible_moves[move], new_state.current_player)
-        new_state.switch_player()
-        possible_moves = get_possible_moves(new_state.board, new_state.current_player)
-    new_state.switch_player()
-    if get_possible_moves(new_state.board, new_state.current_player):
-        return sim_rand(new_state)
-    return new_state
-
-def sim_semi_rand(state:Game):
-    """
-        This is a function that simulates a semi random selection of moves in a game of Reversi.
-        It's semi random because when a random move is chosen, if it's adjacent to a corner in
-        any direction, we choose a new random move, if it's adjacent to a corner diagonally, we
-        choose a new random move.
-        This function is used by the rollout method of MonteCarloPlayer (MCTS algorithm)
-    """
-    new_state = deepcopy(state)
-    possible_moves = get_possible_moves(new_state.board, new_state.current_player)
-    while possible_moves:
-        random.seed(time.time())
-        move = random.choice(list(possible_moves.keys()))
-        if move in bad_moves or move in very_bad_moves:
-            move = random.choice(list(possible_moves.keys()))
-            if move in very_bad_moves:
-                move = random.choice(list(possible_moves.keys()))
-        new_state.play_move(move[0], move[1], possible_moves[move], new_state.current_player)
-        new_state.switch_player()
-        possible_moves = get_possible_moves(new_state.board, new_state.current_player)
-    new_state.switch_player()
-    if get_possible_moves(new_state.board, new_state.current_player):
-        return sim_semi_rand(new_state)
-    return new_state
