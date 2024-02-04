@@ -4,6 +4,7 @@ from game import *
 from util import *
 from node import *
 import random
+from ai_helper import *
 
 
 class RandomPlayer(AIPlayer):
@@ -36,122 +37,62 @@ class GreedyPlayer(AIPlayer):
         return best_move
 
 
-directions = [[1, 0], [1, 1], [1, -1], [0, 1], [-1, 1], [-1, -1], [-1, 0], [0, -1]]
-
-
 class MinimaxPlayer(AIPlayer):
-    def __init__(self, color: int, name="MinimaxPlayer", type="AI"):
+    def __init__(self, color: int, name="MinimaxPlayer", type="AI", evaluator=StaticEvaluator(), depth=6):
         super().__init__(color, name, type)
-    
-    def get_potential_mobility(self, i, j, node):
-        empty_count = 0
-        for diry, dirx in directions:
-            if node.board[i + diry][j + dirx] == 0:
-                empty_count += 1
-        
-    
-    def mobility(self, node: Node):
-        node.get_children()
-        mobility = len(node.children)
-        for child in node.children:
-            for i in range(8):
-                for j in range(8):
-                    if child.board[i][j] == child.player:
-                        mobility -= self.get_potential_mobility(i, j, child)
-                    if child.board[i][j] == 0:
-                        continue
-                    else:
-                        mobility += self.get_potential_mobility(i, j, child)
-        return mobility
-    
-    def stability(self, node: Node):
-
-        return
-
-
-class MCTSNode:
-    def __init__(self, state:Game, move=None, parent=None, depth=0):
-        self.state = state
-        self.move = move
-        self.parent = parent
-        self.children = []
-        self.played = 0
-        self.wins = 0
+        self.evaluator = evaluator
         self.depth = depth
-
-    def expand(self):
-        possible_moves = get_possible_moves(self.state.board, self.state.current_player)
-
+    
+    def find_move(self, game):
+        move = self.get_opening_move(game)
+        if move:
+            return move
+        possible_moves = get_possible_moves(game.board, game.current_player)
+        best_move_score = float("-inf")
+        best_move = None
         for move, lines in possible_moves.items():
-            child_state = deepcopy(self.state)
-            child_state.play_move(move[0], move[1], lines, self.state.current_player)
-            self.children.append(MCTSNode(child_state, move, parent=self, depth=self.depth + 1))
+            temp_game = Game(deepcopy(game.board))
+            temp_game.play_move(move[0], move[1], lines, game.current_player)
+            new_board = temp_game.board
+            move_score = self.min_max_alpha_beta(new_board, game.current_player, self.depth, True, float("-inf"), float("inf"))
+            if move_score > best_move_score:
+                best_move_score = move_score
+                best_move = move
+        return best_move
     
-    def back_propagate(self, wins, loss, played):
-        player = self.state.current_player
-        self.wins += wins
-        self.played += played
-        parent = self.parent
-        while parent:
-            if parent.state.current_player == player:
-                parent.wins += wins
-            else:
-                parent.wins += loss
-            parent.played += played
-            parent = parent.parent
-    
-    def select_child(self, exploraition_param, maximize):
-        index_best_score = 0
-        best_ucb_score = None
-
-        if maximize:
-            best_ucb_score = float("-inf")
+    def min_max_alpha_beta(self, board, player, depth, max, alpha, beta):
+        game = Game(board)
+        if depth == 0 or game.is_game_over():
+            return self.evaluator.eval(board, player)
+        
+        possible_moves = {}
+        other_player = 1 if player == 2 else 2
+        if max:
+            possible_moves = get_possible_moves(board, player)
         else:
-            best_ucb_score = float("inf")
-
-        for i, child in enumerate(self.children):
-            ucb_score = child.calculate_ucb(exploraition_param, 3)
-
-            inner_score = ucb_score / math.sqrt((child.move[0] - 3.5) ** 2 + (child.move[1] - 3.5) ** 2)
-            
-            greedPenalty = ucb_score * (child.state.black_score - self.state.black_score) / (child.state.black_score + child.state.white_score) ** 4
-            if self.state.current_player == 2:
-                greedPenalty = ucb_score * (child.state.white_score - self.state.white_score) / (child.state.black_score + child.state.white_score) ** 4
-
-            move_score = 0.00
-            if child.move in corners:
-                move_score = ucb_score * 1.5
-            if child.move in bad_moves:
-                move_score = ucb_score * (-0.55)
-            if child.move in very_bad_moves:
-                move_score = ucb_score * (-100)
-
-            if maximize:
-                if child.state.black_score + child.state.white_score > 50:
-                    final_ucb_score = ucb_score
-                else:
-                    final_ucb_score = ucb_score + inner_score + move_score - greedPenalty
-                if final_ucb_score > best_ucb_score:
-                    best_ucb_score = final_ucb_score
-                    index_best_score = i
-
+            possible_moves = get_possible_moves(board, other_player)
+        if not possible_moves:
+            return self.min_max_alpha_beta(board, player, depth - 1, not max, alpha, beta)
+        score = float("-inf") if max else float("inf")
+        
+        for move, lines in possible_moves.items():
+            temp_game = Game(deepcopy(game.board))
+            temp_game.play_move(move[0], move[1], lines, player if max else other_player)
+            new_board = temp_game.board
+            move_score = self.min_max_alpha_beta(new_board, player, depth - 1, not max, alpha, beta)
+            if max:
+                if move_score > score:
+                    score = move_score
+                if score > alpha:
+                    alpha = score
             else:
-                if child.state.black_score + child.state.white_score > 50:
-                    final_ucb_score = ucb_score
-                else:
-                    final_ucb_score = ucb_score - inner_score - move_score + greedPenalty
-                if final_ucb_score < best_ucb_score and child.played > 0:
-                    best_ucb_score = final_ucb_score
-                    index_best_score = i
-
-        return self.children[index_best_score]
-    
-    def calculate_ucb(self, num_games, c_param=3):
-        return (
-            (self.wins / (self.played + 1))
-            + math.sqrt(c_param)
-            * math.sqrt(math.log(num_games + 1) / (self.played + 1))
-        )
+                if move_score < score:
+                    score = move_score
+                if score < beta:
+                    beta = score
+            if beta <= alpha:
+                break
+        return score
 
 
 class MCTSPlayer(AIPlayer):

@@ -87,6 +87,9 @@ class Game:
                 if square == player:
                     disks += 1
         return disks
+    
+    def get_total_disk_count(self):
+        return self.player_disk_count(1) + self.player_disk_count(2)
 
     def play_move(self, i, j, lines, player):
         self.flip_disks(lines, player)
@@ -112,7 +115,7 @@ class Game:
     
     def is_game_over(self):
         return (
-            self.black_score + self.white_score == 64
+            self.get_total_disk_count() == 64
             or (
                 not get_possible_moves(self.board, 1)
                 and

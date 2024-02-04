@@ -8,6 +8,7 @@ import datetime
 from ai_players import *
 from time import sleep
 import random
+from ai_helper import *
 
 
 # ------------- classes definitions for maintaining the graphics
@@ -318,9 +319,9 @@ class Window:
         if name == "RandomPlayer":
             return RandomPlayer(color, name)
         elif name == "MinimaxPlayer":
-            return MinimaxPlayer(color, name)
+            return MinimaxPlayer(color=color, name=name, evaluator=DynamicEvaluator(), depth=6)
         elif name == "MCTSPlayer":
-            return MCTSPlayer(color, name, "AI", 20, 50)
+            return MCTSPlayer(color=color, name=name, num_sims=20, max_iter=50)
         elif name == "GreedyPlayer":
             return GreedyPlayer(color, name)
         else:
@@ -566,6 +567,7 @@ class Board:
         i, j = self.get_position(event.x, event.y)
         try:
             self.play_move(i, j, game, color)
+            self._win.redraw()
         except InvalidMoveError as e:
             print(str(e) + "\nTry again.")
         return self.play(game)
@@ -626,6 +628,7 @@ class Board:
         if cur_player.type == "Human":
             self.__canvas.bind('<Button-1>', lambda e: self.mouse_pressed(e, game, color))
         else:
-            i, j = cur_player.find_move(game)
-            self.play_move(i, j, game, color)
+            move = cur_player.find_move(game)
+            if move:
+                self.play_move(move[0], move[1], game, color)
             return self.play(game)

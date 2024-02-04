@@ -125,7 +125,7 @@ def rollout(game, num_sims):
 
     start = time.time()
     for _ in range(num_sims):
-        temp_game = sim_semi_rand(game)
+        temp_game = simulate_semi_randomly(game)
         if temp_game.winner == turn:
             wins += 1
         if temp_game.winner == 0:
@@ -136,7 +136,7 @@ def rollout(game, num_sims):
 
     return wins, loss, draws, elapsed
 
-def sim_rand(state):
+def simulate_randomly(state):
     """
         This is a function that simulates a random selection of moves in a game of Reversi.
         This function is used by the rollout method of MonteCarloPlayer (MCTS algorithm)
@@ -151,10 +151,10 @@ def sim_rand(state):
         possible_moves = get_possible_moves(new_state.board, new_state.current_player)
     new_state.switch_player()
     if get_possible_moves(new_state.board, new_state.current_player):
-        return sim_rand(new_state)
+        return simulate_randomly(new_state)
     return new_state
 
-def sim_semi_rand(state):
+def simulate_semi_randomly(state):
     """
         This is a function that simulates a semi random selection of moves in a game of Reversi.
         It's semi random because when a random move is chosen, if it's adjacent to a corner in
@@ -176,5 +176,9 @@ def sim_semi_rand(state):
         possible_moves = get_possible_moves(new_state.board, new_state.current_player)
     new_state.switch_player()
     if get_possible_moves(new_state.board, new_state.current_player):
-        return sim_semi_rand(new_state)
+        return simulate_semi_randomly(new_state)
     return new_state
+
+
+
+directions = [[1, 0], [1, 1], [1, -1], [0, 1], [-1, 1], [-1, -1], [-1, 0], [0, -1]]
