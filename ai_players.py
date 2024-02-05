@@ -47,6 +47,9 @@ class MinimaxPlayer(AIPlayer):
         move = self.get_opening_move(game)
         if move:
             return move
+        move = self.get_strong_move(game.board, game.current_player)
+        if move:
+            return move
         possible_moves = get_possible_moves(game.board, game.current_player)
         best_move_score = float("-inf")
         best_move = None
@@ -93,6 +96,33 @@ class MinimaxPlayer(AIPlayer):
             if beta <= alpha:
                 break
         return score
+    
+    def get_strong_move(self, board, player):
+        possible_moves = get_possible_moves(board, player)
+        corner_move, blocker_move = None, None
+        best_corner, best_blocker = float("-inf"), float("-inf")
+        for move, lines in possible_moves.items():
+            temp_board = deepcopy(board)
+            temp_game = Game(temp_board)
+            temp_game.play_move(move[0], move[1], lines, player)
+            if move in corners:
+                move_value = self.evaluator.eval(temp_game.board, player)
+                if move_value > best_corner:
+                    best_corner = move_value
+                    corner_move = move
+            other_player = 1 if player == 2 else 2
+            if len(get_possible_moves(temp_game.board, other_player)) == 0:
+                move_value = self.evaluator.eval(temp_game.board, player)
+                if move_value > best_blocker:
+                    best_blocker = move_value
+                    blocker_move = move
+                    if blocker_move == corner_move:
+                        return blocker_move
+        if corner_move:
+            return corner_move
+        if blocker_move:
+            return blocker_move
+        return None
 
 
 class MCTSPlayer(AIPlayer):

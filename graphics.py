@@ -576,6 +576,7 @@ class Board:
         self.current_player = abs(self.current_player - 2) + 1
     
     def end_game(self):
+        self.__canvas.unbind('<Button-1>')
         print("Game over!")
         if self.score[0] == self.score[1]:
             if self._win:

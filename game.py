@@ -78,7 +78,6 @@ class Game:
                 else:
                     self.black_score -= 1
                     self.white_score += 1
-
     
     def player_disk_count(self, player):
         disks = 0
