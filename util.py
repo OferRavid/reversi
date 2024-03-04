@@ -3,6 +3,56 @@ import random
 import time
 
 
+corners = [
+    (0, 0), (0, 7), (7, 0), (7, 7)
+]
+
+# Bad moves are locations near a corner in vertical or horizontal directions
+bad_moves = [
+    (0, 1), (1, 0), (0, 6), (6, 0),
+    (7, 1), (1, 7), (7, 6), (6, 7)
+]
+
+# Very bad moves are locations near corners in diagonal direction
+very_bad_moves = [
+    (1, 1), (1, 6), (6, 1), (6, 6)
+]
+
+
+directions = [[1, 0], [1, 1], [1, -1], [0, 1], [-1, 1], [-1, -1], [-1, 0], [0, -1]]
+
+
+# =============================================================================================
+# ----- Lists for use in realtime evaluator for min-max player --------------------------------
+
+weights_list = [
+    [8, 85, -40, 10, 210, 520],
+    [8, 85, -40, 10, 210, 520],
+    [33, -50, -15, 4, 416, 2153],
+    [46, -50, -1, 3, 612, 4141],
+    [51, -50, 62, 3, 595, 3184],
+    [33, -5, 66, 2, 384, 2777],
+    [44, 50, 163, 0, 443, 2568],
+    [13, 50, 66, 0, 121, 986],
+    [4, 50, 31, 0, 27, 192],
+    [8, 500, 77, 0, 36, 299]
+]
+
+timings_list = [0, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+
+square_static_weights = [
+    [100, -10,  8,  6,  6,  8, -10, 100],
+    [-10,-250, -4, -4, -4, -4,-250, -10],
+    [  8,  -4,  6,  4,  4,  6,  -4,   8],
+    [  6,  -4,  4,  0,  0,  4,  -4,   6],
+    [  6,  -4,  4,  0,  0,  4,  -4,   6],
+    [  8,  -4,  6,  4,  4,  6,  -4,   8],
+    [-10,-250, -4, -4, -4, -4,-250, -10],
+    [100, -10,  8,  6,  6,  8, -10, 100]
+]
+
+
 class InvalidMoveError(RuntimeError): ...
 
 # ------------------------------------------------------------------------------------------------------
@@ -11,7 +61,7 @@ class InvalidMoveError(RuntimeError): ...
 
 def find_lines(board, i, j, player):
     """
-        Find all the uninterupted lines of stones that would be captured if player
+        Find all the uninterrupted lines of stones that would be captured if player
         plays row i and column j, and returns all these lines in a list.
         Lines can be vertical (up and down), horizontal (left to right and right to left) and diagonal.
     """
@@ -29,38 +79,42 @@ def find_lines(board, i, j, player):
             elif board[cur_i][cur_j] == player:
                 found = True
                 break
-            else: 
+            else:
                 line.append((cur_i,cur_j))
                 cur_i += y_dir
                 cur_j += x_dir
-        if found and line: 
+        if found and line:
             lines.append(line)
     return lines
 
 def get_possible_moves(board, player):
     """
-        Returns moves dictionary of all possible {(row,column): [lines]} that player can play on
-        the current board. 
+        Returns moves dictionary of all possible {move: list(lines)} that player can play on
+        the current board.
+        move: in the form of (row{i}, column{j})
+        lines: a list of all uninterrupted lines of stones that would be captured if player
+        plays row{i} and column{j}.
     """
     moves = {}
     for i in range(8):
         for j in range(8):
             if board[i][j] == 0:
                 lines = find_lines(board, i, j, player)
-                if lines: 
+                if lines:
                     moves[(i,j)] = lines
     return moves
 
 
 #-------------------------------------------------------------------------------------------------------------
-# These functions help the game to follow after the opening moves to make it easier and faster to find a move.
-#============================================================================================================= 
+# These functions convert notation to indexes and vice versa to handle game moves and game text
+# display + opening move notations
+#=============================================================================================================
 def notation_to_move(notation: str):
     """
         Converts a notation to indexes. For example: 'C2' => 1, 2
     """
     moves_dict = {
-        'a': 0, 'b': 1, 'c': 2, 'd': 3, 
+        'a': 0, 'b': 1, 'c': 2, 'd': 3,
         'e': 4, 'f': 5, 'g': 6, 'h': 7
     }
     i = int(notation[1]) - 1
@@ -82,8 +136,14 @@ def move_to_notation(i, j, player):
     notation += str(i + 1)
     return notation
 
+# ==============================================================================
+# ------- Functions for parsing opening sequences from the opening book --------
+
 def get_openings():
-    with open("opening_moves.txt") as f:
+    """
+        Function to parse openings from the openings book.
+    """
+    with open("openings_book.txt") as f:
         lines = f.readlines()
         openings = []
         for line in lines:
@@ -92,7 +152,11 @@ def get_openings():
     return openings
 
 def get_openings_names():
-    with open("opening_moves.txt") as f:
+    """
+        Function to parse name of openings corresponding to the openings in the
+        openings book.
+    """
+    with open("openings_book.txt") as f:
         lines = f.readlines()
         names = []
         for line in lines:
@@ -100,26 +164,17 @@ def get_openings_names():
                 names.append(line.split('|')[1].strip())
     return names
 
+
 # ==============================================================
-# -- Functions for simulating game
-
-corners = [
-    (0, 0), (0, 7), (7, 0), (7, 7)
-]
-
-# Bad moves are locations near a corner in vertical or horizontal directions
-bad_moves = [
-    (0, 1), (1, 0), (0, 6), (6, 0),
-    (7, 1), (1, 7), (7, 6), (6, 7)
-]
-
-# Very bad moves are locations near corners in diagonal direction
-very_bad_moves = [
-    (1, 1), (1, 6), (6, 1), (6, 6)
-]
-
+# -- Functions for simulating a game
 
 def rollout(game, num_sims):
+    """
+        This function is a vital part of the MCTS algorithm.
+        It simulates random games from current state until terminal state.
+        game: the current state of the game that we run the simulations on.
+        num_sims: the number of games to be simulated.
+    """
     turn = game.current_player
     wins, draws, elapsed = 0, 0, 0
 
@@ -181,4 +236,42 @@ def simulate_semi_randomly(state):
 
 
 
-directions = [[1, 0], [1, 1], [1, -1], [0, 1], [-1, 1], [-1, -1], [-1, 0], [0, -1]]
+# ==============================================================================================
+# -------- Helper functions for realtime evaluator ---------------------------------------------
+
+def get_frontier_squares(board, other_player):
+    """
+        This function finds all empty squares next to any square occupied by opponent.
+    """
+    frontier_squares = set()
+    for i in range(8):
+        for j in range(8):
+            if board[i][j] == other_player:
+                for dir_y, dir_x in directions:
+                    neighbor_i = i + dir_y
+                    neighbor_j = j + dir_x
+                    if 0 <= neighbor_i <= 7 and 0 <= neighbor_j <= 7 and board[neighbor_i][neighbor_j] == 0:
+                        frontier_squares.add((neighbor_i, neighbor_j))
+    return frontier_squares
+
+def get_stable_discs(board, player):
+    """
+        This function finds all the squares we occupy that cannot get captured by the opponent.
+    """
+    stable_discs = set()
+    for i, j in corners:
+        if board[i][j] == player:
+            # stable_discs.add((i, j))
+            for dir_y, dir_x in directions:
+                new_i = i + dir_y
+                new_j = j + dir_x
+                while (
+                    0 <= new_i <= 7
+                    and 0 <= new_j <= 7
+                    and board[new_i][new_j] == player
+                    and (new_i, new_j) not in stable_discs
+                ):
+                    stable_discs.add((new_i, new_j))
+                    new_i += dir_y
+                    new_j += dir_x
+    return stable_discs

@@ -44,11 +44,11 @@ class Disk:
     
     def draw(self, canvas:Canvas, color):
         canvas.create_oval(
-            self._x - self._r, 
-            self._y - self._r, 
-            self._x + self._r, 
-            self._y + self._r, 
-            outline=color, 
+            self._x - self._r,
+            self._y - self._r,
+            self._x + self._r,
+            self._y + self._r,
+            outline=color,
             fill=color
         )
         canvas.pack(fill=BOTH, expand=1)
@@ -108,7 +108,7 @@ class Window:
         self.__running = True
         while self.__running:
             self.redraw()
-        print("Thank you for playing Reversi! Goodbye...")
+        print("We hope you enjoyed playing Reversi! Goodbye...")
     
     def close(self):
         self.__running = False
@@ -120,7 +120,6 @@ class Window:
         self.__menubar = Menu(self.__root)
         self.__root.config(menu=self.__menubar)
         self.__file_menu = Menu(self.__menubar, tearoff=0)
-        self.__root.resizable(False, False)
         self.__file_menu.add_command(label="New Game", command=self.get_num_players_and_start_game)
         self.__file_menu.add_command(label="Replay", command=self.replay_game)
         self.__file_menu.add_separator()
@@ -177,22 +176,19 @@ class Window:
     def get_num_players_and_start_game(self):
         """
             This is the method for the 'New Game' menu command. Using 'simpledialog' we get user's input to start a new game
-            with 0-2 human players.
+            with 1-2 human players.
         """
-        human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
+        human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=1, maxvalue=2)
         if not human_players:
             return
         p1, p2 = None, None
-        if human_players == 0: #TODO
-            p1 = GreedyPlayer(1)
-            p2 = GreedyPlayer(2)
-        elif human_players == 1:
-            dificulty = simpledialog.askinteger("Set dificulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
+        if human_players == 1:
+            difficulty = simpledialog.askinteger("Set difficulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
             random.seed(time.time())
-            if not dificulty:
-                dificulty = random.randint(1, 2)
+            if not difficulty:
+                difficulty = random.randint(1, 2)
             ai_name = random.choice(["RandomPlayer", "GreedyPlayer"])
-            if dificulty == 2:
+            if difficulty == 2:
                 ai_name = "MinimaxPlayer"
             name = simpledialog.askstring(title="Human player's name", prompt="Type player's name:")
             if not name:
@@ -213,7 +209,7 @@ class Window:
 
     def replay_game(self):
         """
-            The method for the 'Replay' menu command. We switch the players' colors and restart a game iswitching players' turns.
+            The method for the 'Replay' menu command. We switch the players' colors and restart a game switching players' turns.
         """
         if not self.__board.game_in_progress:
             raise Exception("Can't replay game if you haven't played yet!")
@@ -244,7 +240,7 @@ class Window:
                 if file.startswith(final_name):
                     file_count += 1
             if '.' in final_name:
-                final_name = f"{'.'.join(final_name.split('.')[:-1])}_{file_count}.{final_name.split('.')[-1]}"
+                final_name = f"{'.'.join(final_name.rsplit('.', 1)[0])}_{file_count}.{final_name.split('.')[-1]}"
             else:
                 final_name += f"_{file_count}.txt"
         return f"Saved_games/{final_name}"
@@ -275,7 +271,7 @@ class Window:
 
     def save_game_as(self):
         """
-            The method for the 'Save Game As...' menu command. 
+            The method for the 'Save Game As...' menu command.
         """
         if not self.__board.game_in_progress:
             raise Exception("Can't save a game if game is not in progress.")
@@ -312,6 +308,8 @@ class Window:
             game.play(i, j, player, color)
             move_count += 1
             insert_text = f"{move_count}. {move_notation}"
+            if move_count < 10:
+                insert_text = f" {insert_text}"
             self.update_text_display(move_count, insert_text)
         return move_count, player
     
@@ -319,7 +317,7 @@ class Window:
         if name == "RandomPlayer":
             return RandomPlayer(color, name)
         elif name == "MinimaxPlayer":
-            return MinimaxPlayer(color=color, name=name, evaluator=DynamicEvaluator(), depth=6)
+            return MinimaxPlayer(color=color, name=name, evaluator=RealtimeEvaluator(), depth=6)
         elif name == "MCTSPlayer":
             return MCTSPlayer(color=color, name=name, num_sims=20, max_iter=50)
         elif name == "GreedyPlayer":
@@ -373,11 +371,11 @@ class Window:
         self.load_name = StringVar(temp_win)
         for game in games:
             Radiobutton(temp_win,
-                        text=game, 
+                        text=game,
                         indicatoron = 0,
                         width = 20,
-                        padx = 20, 
-                        variable=self.load_name, 
+                        padx = 20,
+                        variable=self.load_name,
                         command=lambda: self.load_game_file(temp_win),
                         value=game).pack(anchor=W)
     
@@ -405,11 +403,11 @@ class Window:
         self.delete_name = StringVar(temp_win)
         for game in games:
             Radiobutton(temp_win,
-                        text=game, 
+                        text=game,
                         indicatoron = 0,
                         width = 20,
-                        padx = 20, 
-                        variable=self.delete_name, 
+                        padx = 20,
+                        variable=self.delete_name,
                         command=lambda: self.delete_save_file(temp_win),
                         value=game).pack(anchor=W)
 
@@ -421,7 +419,7 @@ class Window:
             Each player in turn places a white and black
             colored disk to capture the other player's disks.
             To capture disks a player needs to place his disk
-            on a line in a way that he traps the other player's 
+            on a line in a way that he traps the other player's
             disks inbetween 2 of his.\n
             The game ends when there are no more possible moves for any player.
             The winner is the player with the most disks of his color.
@@ -431,14 +429,14 @@ class Window:
     def show_help_info(self):
         help = """
             To start a new game, press 'File' in the menubar and choose 'New Game'.
-            You'll be prompted to provide the number of human players, 0 - if you 
+            You'll be prompted to provide the number of human players, 0 - if you
             want to watch two AI players play each other, 1 - to play against an AI
             player, and 2 - to play against another human player. If you chose 1
-            (play agianst computer), you'll be asked what dificulty level you want
+            (play agianst computer), you'll be asked what difficulty level you want
             the computer player to be: weak or strong.
 
             To replay a game, press 'File' in the menubar and choose 'Replay Game'.
-            A new game will start with the same players as before, but with opposite 
+            A new game will start with the same players as before, but with opposite
             colors from before.
 
             At any time you can save your current game in order to continue later.
@@ -549,7 +547,7 @@ class Board:
     def get_cells(self):
         return self.__cells
     
-    # --------- Methods for running the game 
+    # --------- Methods for running the game
 
     def flip_disks(self, i, j, lines):
         for line in lines:
@@ -603,6 +601,8 @@ class Board:
         self.move_sequence += move_to_notation(i, j, self.current_player)
         if self._win:
             insert_text =f"{self.move_count}. {self.move_sequence[-2:]}"
+            if self.move_count < 10:
+                insert_text = f" {insert_text}"
             self._win.update_text_display(self.move_count, insert_text)
         self.flip_disks(i, j, lines)
         self.switch_player()

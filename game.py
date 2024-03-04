@@ -12,7 +12,7 @@ class Player:
 
     def find_move(self, game):
         """
-            Returns the move chosen by human player by recognizing clicks on the screen
+            
         """
         pass
 
@@ -20,9 +20,6 @@ class Player:
 class AIPlayer(Player):
     def __init__(self, color: int, name, type="AI"):
         super().__init__(color, name, type)
-    
-    def find_move(self, game):
-        pass
 
     def get_opening_move(self, game):
         sequence = game.move_sequence
@@ -143,9 +140,14 @@ class Game:
                 print("Black's turn...")
             else:
                 print("White's turn...")
-            print("Choose a move from: ",
-                  set([move_to_notation(move[0], move[1], self.current_player) 
-                      for move in list(get_possible_moves(self.board, self.current_player).keys())]))
+            print(
+                "Choose a move from: ",
+                set(
+                    [move_to_notation(move[0], move[1], self.current_player)
+                    for move in list(get_possible_moves(self.board, self.current_player).keys())]
+                )
+            )
+                
             try:
                 move_input = input("Enter your choice (e.g., 'A1'): ")
                 i, j = notation_to_move(move_input)

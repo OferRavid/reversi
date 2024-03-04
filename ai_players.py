@@ -2,12 +2,14 @@ from copy import deepcopy
 import math
 from game import *
 from util import *
-from node import *
 import random
 from ai_helper import *
 
 
 class RandomPlayer(AIPlayer):
+    """
+        An AI player for the Reversi game that plays moves at random.
+    """
     def __init__(self, color: int, name="RandomPlayer", type="AI", is_simulation=False):
         super().__init__(color, name, type)
         self.is_simulation = is_simulation
@@ -20,17 +22,22 @@ class RandomPlayer(AIPlayer):
 
 
 class GreedyPlayer(AIPlayer):
+    """
+        An AI player for the Reversi game that chooses the move that captures the most squares.
+    """
     def __init__(self, color: int, name="GreedyPlayer", type="AI"):
         super().__init__(color, name, type)
 
-    def find_move(self, game):
+    def find_move(self, game:Game):
         best_move = None
         disk_amount = 0
         possible_moves = get_possible_moves(game.board, self.color)
+        cur_discs = game.player_disk_count(self.color)
         for move, lines in possible_moves.items():
-            game_copy = copy.deepcopy(game)
-            game_copy.play_move(move[0], move[1], lines, self.color)
-            amount = game_copy.player_disk_count(self.color)
+            amount = cur_discs + sum([len(line) for line in lines])
+            # game_copy = copy.deepcopy(game)
+            # game_copy.play_move(move[0], move[1], lines, self.color)
+            # amount = game_copy.player_disk_count(self.color)
             if amount > disk_amount:
                 best_move = move
                 disk_amount = amount
@@ -38,6 +45,14 @@ class GreedyPlayer(AIPlayer):
 
 
 class MinimaxPlayer(AIPlayer):
+    """
+        An AI player for the Reversi game that chooses a move according to the Min-Max algorithm
+        with alpha-beta pruning.
+        Before choosing a move according to the Min-Max algorithm, the player attempts to find a strong move.
+        A strong move is a corner grab and/or a move that blocks the opponent from placing discs.
+        evaluator: is the heuristic the player uses to evaluate a game state.
+        depth: defines the max depth of the tree the algorithm explores children nodes.
+    """
     def __init__(self, color: int, name="MinimaxPlayer", type="AI", evaluator=StaticEvaluator(), depth=6):
         super().__init__(color, name, type)
         self.evaluator = evaluator
@@ -57,7 +72,7 @@ class MinimaxPlayer(AIPlayer):
             temp_game = Game(deepcopy(game.board))
             temp_game.play_move(move[0], move[1], lines, game.current_player)
             new_board = temp_game.board
-            move_score = self.min_max_alpha_beta(new_board, game.current_player, self.depth, True, float("-inf"), float("inf"))
+            move_score = self.min_max_alpha_beta(new_board, game.current_player, self.depth, False, float("-inf"), float("inf"))
             if move_score > best_move_score:
                 best_move_score = move_score
                 best_move = move
@@ -98,6 +113,16 @@ class MinimaxPlayer(AIPlayer):
         return score
     
     def get_strong_move(self, board, player):
+        """
+            This method iterates over the possible moves to check if a strong move is available.
+            If such a move is possible, the moves value is calculated and the move with the max value
+            is chosen.
+            THe algorithm looks for strong moves in this order:
+            1. A corner grab and blocking move.
+            2. A corner grab move.
+            3. A blocking move.
+            If none of them is possible, it will find a move using the Min-Max algorithm.
+        """
         possible_moves = get_possible_moves(board, player)
         corner_move, blocker_move = None, None
         best_corner, best_blocker = float("-inf"), float("-inf")
@@ -126,6 +151,9 @@ class MinimaxPlayer(AIPlayer):
 
 
 class MCTSPlayer(AIPlayer):
+    """
+        An AI player for the Reversi game that finds a move using the Monte Carlo Tree Search algorithm.
+    """
     def __init__(self, color: int, name="MCTSPlayer", type="AI", num_sims=20, max_iter=300):
         super().__init__(color, name, type)
         self.num_sims = num_sims
@@ -137,24 +165,25 @@ class MCTSPlayer(AIPlayer):
             return move
         root = MCTSNode(game)
         root.expand()
-        current_node = root.select_child(0, maximize=False)
+        random.seed(time.time())
+        current_node = root.children[random.randrange(0, len(root.children))]
         wins, loss, _, total_elapsed = rollout(current_node.state, self.num_sims)
         current_node.back_propagate(wins, loss, self.num_sims)
-        exploraition_param = self.num_sims
+        exploration_param = self.num_sims
 
         for i in range(self.max_iter):
-            current_node = root.select_child(exploraition_param, maximize=True)
+            current_node = root.select_child(exploration_param, maximize=True)
             while current_node.children:
-                current_node = current_node.select_child(exploraition_param, maximize=True)
+                current_node = current_node.select_child(exploration_param, maximize=True)
             if current_node.played != 0:
                 current_node.expand()
                 if current_node.children:
-                    current_node = current_node.select_child(exploraition_param, maximize=True)
+                    current_node = current_node.select_child(exploration_param, maximize=True)
             wins, loss, _, elapsed = rollout(current_node.state, self.num_sims)
             total_elapsed += elapsed
-            exploraition_param += self.num_sims
+            exploration_param += self.num_sims
             current_node.back_propagate(wins, loss, self.num_sims)
-            exploraition_param += self.num_sims
+            exploration_param += self.num_sims
             if total_elapsed > 1.0:
                 break
         child = root.select_child(0, maximize=False)
