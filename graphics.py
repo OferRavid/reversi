@@ -210,12 +210,16 @@ class Window:
         """
             This is the method for the 'New Game' menu command. Using 'simpledialog' we get user's input to start a new game
             with 1-2 human players.
+            Another option is to choose 0 human players and just watch a game between RandomPlayer and GreedyPlayer.
         """
-        human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=1, maxvalue=2)
-        if not human_players:
+        human_players = simpledialog.askinteger("Start a new game", "Please type in the number of human players.", minvalue=0, maxvalue=2)
+        if human_players is None:
             return
         p1, p2 = None, None
-        if human_players == 1:
+        if human_players == 0:
+            p1 = RandomPlayer(1)
+            p2 = GreedyPlayer(2)
+        elif human_players == 1:
             difficulty = simpledialog.askinteger("Set difficulty", "Computer strength: 1 - weak, or 2 - strong", minvalue=1, maxvalue=2)
             random.seed(time.time())
             if not difficulty:

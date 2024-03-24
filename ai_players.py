@@ -8,7 +8,7 @@ from ai_helper import *
 
 class RandomPlayer(AIPlayer):
     """
-        An AI player for the Reversi game that plays moves at random.
+        An AI player for the Reversi game that plays random moves.
     """
     def __init__(self, color: int, name="RandomPlayer", type="AI"):
         super().__init__(color, name, type)

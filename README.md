@@ -1,5 +1,5 @@
 # Reversi - A personal project for the game Reversi with an AI agent
-![ReversiWindow](imgs/reversi_window.png)
+<img src="imgs/reversi_window.png" width=500>
 
 # Creator
     - Ofer Ravid
@@ -48,5 +48,11 @@ Using Python 3+ run:
 
 This will open the game's window.\
 Use the menubar to navigate and choose how you want to start playing.
+
+---
+
+###### Here's a demo with RandomPlayer and GreedyPlayer:
+
+<img src="imgs/Random-vs-Greedy.gif" width="500">
 
 ># ***Have fun!***
