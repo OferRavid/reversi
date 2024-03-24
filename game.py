@@ -5,6 +5,10 @@ from util import *
 
 
 class Player:
+    """
+        The player base class. This is the class to represent human players.
+        It's also a template for AI players' classes.
+    """
     def __init__(self, color: int, name, type="Human"):
         self.name = name
         self.color = color
@@ -12,16 +16,25 @@ class Player:
 
     def find_move(self, game):
         """
-            
+            This method isn't used by human players.
+            It is only used as template for classes that expands this class to implement.
         """
         pass
 
 
 class AIPlayer(Player):
+    """
+        The AI player base class. All AI players expand this class.
+    """
     def __init__(self, color: int, name, type="AI"):
         super().__init__(color, name, type)
 
     def get_opening_move(self, game):
+        """
+            This method is used by all AI players' classes.
+            At the beginning of a game it finds a move according to known
+            opening sequences to help with efficiency.
+        """
         sequence = game.move_sequence
         openings = get_openings()
         possible_openings = []
@@ -39,9 +52,18 @@ class AIPlayer(Player):
         
 
 class Game:
+    """
+        This is the class that defines the game's mechanics.
+        board: a list of lists of 0, 1 or 2, representing the game board.
+        black_score, white_score: the respective current scores of the players.
+        current_player: 1 or 2, representing the player who's placing a move.
+        move_sequence: a string of alphanumerics representing the sequence of moves played.
+        winner: None (while the game isn't done), 0(draw), 1 or 2. Representing the winner of the game.
+    """
     def __init__(self, board=None):
         if board:
             self.board = board
+            self.set_score()
         else:
             self.board = [
                 [0, 0, 0, 0, 0, 0, 0, 0],
@@ -53,11 +75,22 @@ class Game:
                 [0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0],
             ]
-        self.black_score = 2
-        self.white_score = 2
+            self.black_score = 2
+            self.white_score = 2
         self.current_player = 1
         self.move_sequence = ""
         self.winner = None
+    
+    def set_score(self):
+        b_score, w_score = 0, 0
+        for row in range(8):
+            for col in range(8):
+                if self.board[row][col] == 1:
+                    b_score += 1
+                elif self.board[row][col] == 2:
+                    w_score += 1
+        self.black_score = b_score
+        self.white_score = w_score
 
     def get_score(self):
         return [self.black_score, self.white_score]
@@ -66,6 +99,10 @@ class Game:
         self.current_player = abs(self.current_player - 2) + 1
     
     def flip_disks(self, lines, player):
+        """
+            Updates the board after move by switching the value in the cells to player.
+            player: 1 or 2. The player who placed the move.
+        """
         for line in lines:
             for i, j in line:
                 self.board[i][j] = player
@@ -88,6 +125,12 @@ class Game:
         return self.player_disk_count(1) + self.player_disk_count(2)
 
     def play_move(self, i, j, lines, player):
+        """
+            Plays a move by updating the board and scores.
+            After placing the move, adds it to the move sequence.
+            Updates current_player to other player.
+            If game is over, it sets the winner.
+        """
         self.flip_disks(lines, player)
         self.board[i][j] = player
         if player == 1:
@@ -101,6 +144,10 @@ class Game:
             self.set_winner()
     
     def play(self, i, j, player, color):
+        """
+            If the move is valid it plays it, otherwise raises relevant exception.
+            Returns the lines of cells on the board captured by the move.
+        """
         if self.board[i][j] != 0:
             raise InvalidMoveError("Square is already taken.")
         lines = find_lines(self.board, i, j, player)
@@ -134,7 +181,10 @@ class Game:
         return board
     
     def play_game(self):
-        while not self.is_game_over():
+        """
+            This is a simple game for the console for 2 human players.
+        """
+        while self.winner is None:
             print(self)
             if self.current_player == 1:
                 print("Black's turn...")

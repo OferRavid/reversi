@@ -28,6 +28,9 @@ class Line:
         self.p2 = p2
     
     def draw(self, canvas: Canvas, fill_color="black"):
+        """
+            Method to draw a line on a tkinter canvas.
+        """
         x1 = self.p1.x
         y1 = self.p1.y
         x2 = self.p2.x
@@ -37,24 +40,35 @@ class Line:
 
 
 class Disk:
-    def __init__(self, center: Point, radius):
+    def __init__(self, center: Point, radius, color):
         self._x = center.x
         self._y = center.y
         self._r = radius
+        self._color = color
     
-    def draw(self, canvas:Canvas, color):
+    def draw(self, canvas:Canvas):
+        """
+            Method for drawing disk on a tkinter canvas.
+        """
         canvas.create_oval(
             self._x - self._r,
             self._y - self._r,
             self._x + self._r,
             self._y + self._r,
-            outline=color,
-            fill=color
+            outline=self._color,
+            fill=self._color
         )
         canvas.pack(fill=BOTH, expand=1)
+    
+    def __repr__(self):
+        return f"Center is: Point({self._x},{self._y}), radius is: {self._r}, color is: {self._color}"
 
 
 class Cell:
+    """
+        Class for a cell in a Reversi board.
+        Using 4 given values we define 4 lines: bottom, top, left and right.
+    """
     def __init__(self, x1, y1, x2, y2):
         self._x1 = x1
         self._y1 = y1
@@ -67,19 +81,26 @@ class Cell:
         self._right = Line(Point(x2, y1), Point(x2, y2))
     
     def draw(self, canvas: Canvas):
+        """
+            Method to draw the cell on a tkinter canvas.
+        """
         self._top.draw(canvas)
         self._bottom.draw(canvas)
         self._left.draw(canvas)
         self._right.draw(canvas)
 
-    def in_cell(self, x, y):
-        return self._x1 <= x <= self._x2 and self._y1 <= y <= self._y2
+    # def in_cell(self, x, y):
+    #     return self._x1 <= x <= self._x2 and self._y1 <= y <= self._y2
 
 
 # =========================================================================================
 # -------------- The window class manages the Gui for the game
     
 class Window:
+    """
+        This is the class that defines the gui window.
+        Using tkinter we define a window with canvas and menubar for the Reversi game.
+    """
     def __init__(self):
         self.__root = Tk()
         self.__root.title("Reversi")
@@ -117,6 +138,9 @@ class Window:
     # --------------- UI methods
 
     def manage_menubar(self):
+        """
+            This method defines the menubar and what each command in the menubar does.
+        """
         self.__menubar = Menu(self.__root)
         self.__root.config(menu=self.__menubar)
         self.__file_menu = Menu(self.__menubar, tearoff=0)
@@ -136,12 +160,18 @@ class Window:
         self.__menubar.add_cascade(label="Help", menu=self.__help_menu)
     
     def initialize_ui_text(self):
+        """
+            Method to initialize the text display.
+        """
         self.score_text = self.f_canvas.create_text(70,45,text="Black's score: 2\n\nWhite's score: 2")
         self.turn_text = self.f_canvas.create_text(100,100,text="")
         self.move_sequence_text = Text(self.f_canvas,bg="white",width=25,height=30)
         self.move_sequence_text.pack(side=BOTTOM)
 
     def update_text_display(self, move_count, insert_text):
+        """
+            Method to manage the text display during the game.
+        """
         self.f_canvas.itemconfig(self.score_text, text=f"Black's score: {self.__board.score[0]}\n\nWhite's score: {self.__board.score[1]}")
         if move_count % 2 == 0:
             insert_text += "\n"
@@ -150,6 +180,9 @@ class Window:
         self.move_sequence_text.insert(INSERT,f"{insert_text}")
 
     def restart_canvas(self):
+        """
+            Method to reset the canvas for when we try to load another game or replay current game.
+        """
         self.__right.destroy()
         self.__canvas.destroy()
         self.__right = Frame(self.__root, bg="#CCCCCC", width=200)
@@ -200,6 +233,9 @@ class Window:
         self.start_game(p1, p2)
 
     def start_game(self, p1, p2):
+        """
+            Method to start a game.
+        """
         self.restart_canvas()
         self.__board = Board(self, p1, p2)
         self.initialize_ui_text()
@@ -287,6 +323,9 @@ class Window:
             print("Game wasn't saved. If you didn't cancel, please try again and provide the name of the game's save file.")
     
     def get_save_file_content(self, path):
+        """
+            Helper method for parsing game information from save file.
+        """
         names, sequence = [], ""
         with open(path) as f:
             lines = f.readlines()
@@ -295,6 +334,9 @@ class Window:
         return names, sequence
     
     def populate_board(self, game, sequence):
+        """
+            Helper method to set the board according to the save file data when loading saved game.
+        """
         player, move_count = 0, 0
         for i in range(2, len(sequence) + 1, 2):
             move_notation = sequence[i-2:i]
@@ -314,6 +356,9 @@ class Window:
         return move_count, player
     
     def get_player(self, name, color):
+        """
+            Helper method for getting a player object by using the name of the player.
+        """
         if name == "RandomPlayer":
             return RandomPlayer(color, name)
         elif name == "MinimaxPlayer":
@@ -383,6 +428,9 @@ class Window:
     # ------ methods for deleting old save files
             
     def delete_save_file(self, temp_win):
+        """
+            Helper method for deleting a saved game.
+        """
         temp_win.destroy()
         path = f"Saved_games/{self.delete_name.get()}"
         print(path)
@@ -420,7 +468,7 @@ class Window:
             colored disk to capture the other player's disks.
             To capture disks a player needs to place his disk
             on a line in a way that he traps the other player's
-            disks inbetween 2 of his.\n
+            disks in between 2 of his.\n
             The game ends when there are no more possible moves for any player.
             The winner is the player with the most disks of his color.
         """
@@ -443,7 +491,7 @@ class Window:
             Press 'File' in the menubar and choose 'Save Game'.
             Your current game will be saved under the current time stamp.
 
-            To load a saved game, press 'File' in the menubar and choos 'Load Game'.
+            To load a saved game, press 'File' in the menubar and choose 'Load Game'.
             Choose from the list of saved games the game you want to continue.
         """
         simpledialog.SimpleDialog(self.__root, text=help, default=1, cancel=1, title="How to play").go()
@@ -461,6 +509,9 @@ class Window:
 # =======================================================================================================
 # --------------- The Board class defines and manages the game board for the Gui
 class Board:
+    """
+        Class for the game board in the gui.
+    """
     def __init__(self, win: Window=None, player1=None, player2=None):
         self._win = win
         if self._win:
@@ -473,7 +524,8 @@ class Board:
             self.background_image = self.__canvas.create_image(375,375,image=self.new_img)
             self.add_grid_labels()
             self.rect = self.__canvas.create_rectangle(75, 75, 675, 675, fill="#00C957")
-        self.__cells = []
+        self.__cells = list()
+        self.__disks = list()
         self.__cell_size = 75
         self.game_in_progress = False
         self.game_saved = False
@@ -491,6 +543,9 @@ class Board:
     # -------- Methods for initializing and drawing the game board
             
     def draw_grid(self):
+        """
+            Method for drawing the grid of the game board.
+        """
         for i in range(8):
             row = []
             for j in range(8):
@@ -515,6 +570,10 @@ class Board:
             self.__cells.append(row)
     
     def add_grid_labels(self):
+        """
+            Method for adding letters to columns' headers and numbers to rows' headers.
+            This isn't crucial for the game's logic. It's just for decoration.
+        """
         margin1 = 110
         margin2 = 35
         alphabet = "ABCDEFGH"
@@ -524,19 +583,24 @@ class Board:
             self.__canvas.create_text(margin2, margin1 + 75 * i, text=numbers[i], font=("Times", 28, "bold"), fill="#CDAA7D")
     
     def draw_disks(self):
-        if not self._win:
-            return
+        """
+            Method for drawing disks on the board.
+        """
         for i in range(8):
+            row = []
             for j in range(8):
                 x, y = self.get_mid(i, j)
                 r = 0.40 * self.__cell_size
-                disk = Disk(Point(x, y), r)
                 color = "#00C957"
                 if self.__cells[i][j].owner == 1:
                     color = "black"
                 if self.__cells[i][j].owner == 2:
                     color = "white"
-                disk.draw(self.__canvas, color)
+                disk = Disk(Point(x, y), r, color)
+                if self._win:
+                    disk.draw(self.__canvas)
+                row.append(disk)
+            self.__disks.append(row)
         if self.game_in_progress and not (self.players[1].type == "Human" or self.players[2].type == "Human"):
             self._win.redraw()
             sleep(0.5)
@@ -547,9 +611,15 @@ class Board:
     def get_cells(self):
         return self.__cells
     
+    def get_disks(self):
+        return self.__disks
+    
     # --------- Methods for running the game
 
     def flip_disks(self, i, j, lines):
+        """
+            Method for switching disks colors on squares that were captured by a move.
+        """
         for line in lines:
             for u, v in line:
                 self.__cells[u][v].owner = self.current_player
@@ -557,11 +627,18 @@ class Board:
         self.draw_disks()
     
     def get_position(self,x,y):
+        """
+            Helper method for translating x,y values gotten from pressing the mouse button on the game board,
+            to indexes of the relevant cell in the grid.
+        """
         i = (y - self.__cell_size) // self.__cell_size
         j = (x - self.__cell_size) // self.__cell_size
         return i,j
     
     def mouse_pressed(self, event, game, color):
+        """
+            Method that places a move on the game board according to a mouse button pressed event.
+        """
         i, j = self.get_position(event.x, event.y)
         try:
             self.play_move(i, j, game, color)
@@ -571,10 +648,17 @@ class Board:
         return self.play(game)
     
     def switch_player(self):
+        """
+            Method to switch between the players who is the next to play.
+        """
         self.current_player = abs(self.current_player - 2) + 1
     
     def end_game(self):
-        self.__canvas.unbind('<Button-1>')
+        """
+            Method for handling the game board when the game ends.
+        """
+        if self._win:
+            self.__canvas.unbind('<Button-1>')
         print("Game over!")
         if self.score[0] == self.score[1]:
             if self._win:
@@ -595,6 +679,9 @@ class Board:
         return winner.color
     
     def play_move(self, i, j, game, color):
+        """
+            The method for placing a move on the board.
+        """
         lines = game.play(i, j, self.current_player, color)
         self.score = game.get_score()
         self.move_count += 1

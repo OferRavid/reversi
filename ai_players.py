@@ -10,9 +10,8 @@ class RandomPlayer(AIPlayer):
     """
         An AI player for the Reversi game that plays moves at random.
     """
-    def __init__(self, color: int, name="RandomPlayer", type="AI", is_simulation=False):
+    def __init__(self, color: int, name="RandomPlayer", type="AI"):
         super().__init__(color, name, type)
-        self.is_simulation = is_simulation
     
     def find_move(self, game):
         possible_moves = get_possible_moves(game.board, self.color)
