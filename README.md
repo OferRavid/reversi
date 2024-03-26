@@ -40,6 +40,19 @@
 
 - imgs -    A folder for all the images needed for the game.
 
+---
+
+# Plans for the future
+
+- Make the gui window resizable with all canvas' elements or figure out how to
+  fix the resizable(False, False) method to disable resizing completely.
+
+- Make the MCTS and Minimax agents faster.
+
+- Optional: remember old games and use them to teach an AI player to find the
+  best move based on old experience.
+
+---
 
 # How to play
 Using Python 3+ run:
