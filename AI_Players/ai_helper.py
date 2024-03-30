@@ -1,6 +1,6 @@
 import math
-from util import *
-from game import *
+from Game.util import *
+from Game.game import *
 
 
 # ===============================================================================================================

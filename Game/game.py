@@ -1,7 +1,7 @@
 import random
 from time import sleep
 from tkinter import BOTH, BOTTOM, INSERT, RIGHT, TOP, Button, Canvas, Entry, Label, StringVar, Text, font
-from util import *
+from Game.util import *
 
 
 class Player:

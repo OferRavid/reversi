@@ -1,9 +1,9 @@
 from copy import deepcopy
 import math
-from game import *
-from util import *
+from Game.game import *
+from Game.util import *
 import random
-from ai_helper import *
+from AI_Players.ai_helper import *
 
 
 class RandomPlayer(AIPlayer):

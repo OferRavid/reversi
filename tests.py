@@ -1,8 +1,8 @@
 import unittest
-from game import *
-from ai_players import *
-from graphics import Board
-from util import *
+from Game.game import *
+from AI_Players.ai_players import *
+from GUI.graphics import Board
+from Game.util import *
 
 
 class Tests(unittest.TestCase):

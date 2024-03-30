@@ -2,13 +2,13 @@ import os
 from tkinter import *
 from tkinter import simpledialog
 from PIL import Image, ImageTk
-from game import *
-from util import *
+from Game.game import *
+from Game.util import *
 import datetime
-from ai_players import *
+from AI_Players.ai_players import *
 from time import sleep
 import random
-from ai_helper import *
+from AI_Players.ai_helper import *
 
 
 # ------------- classes definitions for maintaining the graphics

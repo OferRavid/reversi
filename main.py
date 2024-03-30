@@ -1,6 +1,5 @@
-from graphics import Window, Board
-from ai_players import *
-from game import *
+from GUI.graphics import Window
+from Game.game import *
 
 def main():
     win = Window()
