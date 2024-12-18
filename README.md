@@ -58,9 +58,19 @@
 ---
 
 # How to play
+
 Using Python 3+ run:
 
 `python main.py`
+
+Or...
+
+Using docker:
+
+Build container:
+`docker build -t reversi .`
+Run:
+`docker run -i -t --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --mount source=Saved_games,target=/usr/src/app/Saved_games reversi`
 
 This will open the game's window.\
 Use the menubar to navigate and choose how you want to start playing.
