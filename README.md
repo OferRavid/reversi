@@ -67,9 +67,10 @@ Or...
 
 Using docker:
 
-Build container:
-`docker build -t reversi .`
-Run:
+Build container:  
+`docker build -t reversi .`  
+
+Run:  
 `docker run -i -t --rm -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --mount source=Saved_games,target=/usr/src/app/Saved_games reversi`
 
 This will open the game's window.\
